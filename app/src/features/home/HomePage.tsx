@@ -541,7 +541,7 @@ export const HomePage: React.FC = () => {
 
         {aba === 'config' && (
           <ConfigPage
-            onShowToast={(t, tipo) => mostrarAviso(t, tipo)}
+            onShowToast={mostrarAviso}
             onAccountsChanged={carregarDadosGerais}
           />
         )}

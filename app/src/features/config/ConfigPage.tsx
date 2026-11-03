@@ -120,13 +120,12 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
       setContas(accs);
       setFormas(pms);
       setCategorias(cats);
-      onAccountsChanged?.();
     } catch (err: any) {
       onShowToast(err?.message || 'Erro ao carregar configurações.', 'erro');
     } finally {
       setCarregandoDados(false);
     }
-  }, [onAccountsChanged, onShowToast]);
+  }, [onShowToast]);
 
   useEffect(() => {
     carregarTudo();
@@ -191,6 +190,7 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
       }
       setModalContaAberto(false);
       await carregarTudo();
+      onAccountsChanged?.();
     } catch (err: any) {
       onShowToast(err?.message || 'Erro ao salvar conta.', 'erro');
     } finally {
@@ -206,6 +206,7 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
         'info'
       );
       await carregarTudo();
+      onAccountsChanged?.();
     } catch (err: any) {
       onShowToast(err?.message || 'Erro ao arquivar conta.', 'erro');
     }
@@ -216,6 +217,7 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
       await deleteAccount(c.id);
       onShowToast(`Conta "${c.name}" excluída.`, 'sucesso');
       await carregarTudo();
+      onAccountsChanged?.();
     } catch (err: any) {
       onShowToast(
         'Não foi possível excluir esta conta (arquive-a caso já tenha vínculo).',

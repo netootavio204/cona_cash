@@ -3,12 +3,12 @@
 > O agente DEVE atualizar este arquivo. Ao retomar, leia primeiro "ESTADO ATUAL".
 
 ## ESTADO ATUAL
-- Fase atual: **FASE 3 — Concluída e testada (aguardando "APROVADO" do Octavio)**
-- Último passo concluído: migration `003_transactions.sql` aplicada no Supabase + Entrada Rápida, Lote do Dia (5 linhas iniciais, tudo ou nada), Saída, Transferência, Lista com filtros/busca/paginação (50), Lixeira (soft delete + desfazer 6s), Histórico (`audit_log`), botão flutuante `+` e planilha de conferência de 10 lançamentos validada
-- Próximo passo: receber o **"APROVADO"** da Fase 3 e iniciar a Entrevista da Fase 4 (`FASE-4.md`)
+- Fase atual: **FASE 3 concluída (Aguardando Retorno do Octavio para Iniciar Fase 4)**
+- Último passo concluído: Correção do bug de carregamento em loop infinito na tela de Configurações (`ConfigPage.tsx`), testes 100% aprovados e commit sincronizado no GitHub
+- Próximo passo quando voltar: Iniciar a FASE 4 (Dashboard completo, Relatórios dia/semana/mês/personalizado, gráficos e exportação em PDF)
 - Versão do app: `v0.3.0 beta`
-- Último commit/deploy: enviado para `origin/main` no GitHub
-- Aguardando aprovação do Octavio? **SIM** (aguardando "APROVADO" da Fase 3)
+- Último commit/deploy: sincronizado no GitHub (`origin/main`)
+- Aguardando aprovação do Octavio? Sessão pausada pelo Octavio. Ao retornar, basta dizer "continuar" ou executar o comando de retomada.
 
 ## PROGRESSO DAS FASES
 | Fase | Nome | Status | Aprovada em |

@@ -274,3 +274,4 @@ AS $$
   WHERE a.user_id = auth.uid()
   ORDER BY a.archived ASC, a.created_at ASC;
 $$;
+
