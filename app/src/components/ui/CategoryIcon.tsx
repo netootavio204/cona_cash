@@ -61,3 +61,4 @@ export const CategoryIcon: React.FC<{
       return <Tag className={className} />;
   }
 };
+

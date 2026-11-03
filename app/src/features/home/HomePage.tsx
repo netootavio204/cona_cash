@@ -84,9 +84,9 @@ export const HomePage: React.FC = () => {
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-2 min-w-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <img
-              src="/logos/logo_transparente.png"
+              src="/logos/logo_dark.png"
               alt="Cona Cash"
-              className="w-9 h-9 rounded-xl bg-[#141418] p-1 border border-[#262630] shrink-0 object-contain"
+              className="w-10 h-10 rounded-xl bg-black p-0.5 border border-[#FF7A1A]/40 shrink-0 object-contain"
             />
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 min-w-0">

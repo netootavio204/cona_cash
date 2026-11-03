@@ -143,6 +143,9 @@ BEGIN
     RAISE EXCEPTION 'CADASTRO_FECHADO: O cadastro de novos usuários está fechado pelo administrador.';
   END IF;
 
+  -- Auto-confirma o e-mail para que o controle de entrada seja feito pela tela de aprovação do Admin
+  NEW.email_confirmed_at := COALESCE(NEW.email_confirmed_at, now());
+
   RETURN NEW;
 END;
 $$;

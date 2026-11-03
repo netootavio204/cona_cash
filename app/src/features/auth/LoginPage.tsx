@@ -10,6 +10,8 @@ import { APP_NAME, APP_VERSION } from '../../config/version';
 
 type ModoTela = 'login' | 'cadastro' | 'recuperar';
 
+const INITIAL_ADMIN_EMAIL = 'netootavio204@gmail.com';
+
 export const LoginPage: React.FC = () => {
   const { configApp, recarregarPerfilEConfig } = useAuth();
   const [modo, setModo] = useState<ModoTela>('login');
@@ -22,7 +24,6 @@ export const LoginPage: React.FC = () => {
 
   const cadastroAberto = configApp.signup_open;
 
-  // Se o admin fechar o cadastro enquanto o usuário está na aba de cadastro, volta para login
   useEffect(() => {
     if (!cadastroAberto && modo === 'cadastro') {
       setModo('login');
@@ -43,10 +44,10 @@ export const LoginPage: React.FC = () => {
       return 'O cadastro de novos usuários está fechado pelo administrador.';
     }
     if (lower.includes('invalid login credentials')) {
-      return 'E-mail ou senha incorretos. Confira os dados e tente novamente.';
+      return 'E-mail ou senha incorretos (ou conta ainda não criada na aba "Criar conta").';
     }
     if (lower.includes('user already registered')) {
-      return 'Este e-mail já está cadastrado. Faça login ou recupere sua senha.';
+      return 'Este e-mail já está cadastrado. Use a aba "Entrar" ou recupere sua senha.';
     }
     if (lower.includes('password should be at least')) {
       return 'A senha deve ter pelo menos 6 caracteres.';
@@ -57,9 +58,19 @@ export const LoginPage: React.FC = () => {
     return msg;
   };
 
+  const normalizarSenhaSupabase = (raw: string): string => {
+    // O Supabase Auth exige no mínimo 6 caracteres internamente.
+    // Completamos de forma determinística caso o usuário prefira uma senha curta (ex: 4 ou 5 caracteres).
+    if (raw.length > 0 && raw.length < 6) {
+      return `${raw}_cona6`;
+    }
+    return raw;
+  };
+
   const aoSubmeter = async (e: React.FormEvent) => {
     e.preventDefault();
     const emailLimpo = email.trim().toLowerCase();
+    const senhaFinal = normalizarSenhaSupabase(senha);
 
     if (!emailLimpo) {
       mostrarAviso('Informe seu e-mail.', 'erro');
@@ -71,28 +82,41 @@ export const LoginPage: React.FC = () => {
       if (modo === 'login') {
         const { error } = await supabase.auth.signInWithPassword({
           email: emailLimpo,
-          password: senha,
+          password: senhaFinal,
         });
+
+        // Se for o primeiro acesso do e-mail Admin (netootavio204@gmail.com) direto na aba Entrar,
+        // cria automaticamente a conta Admin com a senha informada e já entra!
+        if (error && emailLimpo === INITIAL_ADMIN_EMAIL) {
+          const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
+            email: emailLimpo,
+            password: senhaFinal,
+            options: {
+              data: { name: 'Octavio' },
+            },
+          });
+
+          if (!signUpErr && signUpData.session) {
+            await recarregarPerfilEConfig();
+            return;
+          }
+        }
+
         if (error) throw error;
         await recarregarPerfilEConfig();
       } else if (modo === 'cadastro') {
-        // Verifica novamente no servidor antes de tentar cadastrar
         await recarregarPerfilEConfig();
         if (!configApp.signup_open) {
           setModo('login');
           throw new Error('CADASTRO_FECHADO: O cadastro de novos usuários está fechado.');
         }
 
-        if (senha.length < 6) {
-          throw new Error('A senha precisa ter no mínimo 6 caracteres.');
-        }
-
         const { data, error } = await supabase.auth.signUp({
           email: emailLimpo,
-          password: senha,
+          password: senhaFinal,
           options: {
             data: {
-              name: nome.trim() || emailLimpo.split('@')[0],
+              name: nome.trim() || (emailLimpo === INITIAL_ADMIN_EMAIL ? 'Octavio' : emailLimpo.split('@')[0]),
             },
           },
         });
@@ -101,10 +125,15 @@ export const LoginPage: React.FC = () => {
 
         if (data.session) {
           await recarregarPerfilEConfig();
-          mostrarAviso('Cadastro criado! Sua conta aguarda aprovação do administrador.', 'sucesso');
+          if (emailLimpo !== INITIAL_ADMIN_EMAIL) {
+            mostrarAviso(
+              'Cadastro criado! Sua conta aguarda aprovação do administrador.',
+              'sucesso'
+            );
+          }
         } else {
           mostrarAviso(
-            'Cadastro registrado! Verifique seu e-mail ou faça login para acompanhar a aprovação.',
+            'Cadastro registrado! Faça login para acompanhar a aprovação.',
             'sucesso'
           );
           setModo('login');
@@ -121,7 +150,10 @@ export const LoginPage: React.FC = () => {
         setModo('login');
       }
     } catch (err: any) {
-      mostrarAviso(traduzirErroAuth(err?.message || 'Erro ao processar solicitação.'), 'erro');
+      mostrarAviso(
+        traduzirErroAuth(err?.message || 'Erro ao processar solicitação.'),
+        'erro'
+      );
     } finally {
       setEnviando(false);
     }
@@ -136,13 +168,13 @@ export const LoginPage: React.FC = () => {
       />
 
       <div className="w-full max-w-md mx-auto my-auto z-10 flex flex-col gap-5 min-w-0">
-        {/* Cabeçalho com Logo Oficial da Cona */}
-        <div className="flex flex-col items-center text-center gap-2 min-w-0">
-          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-[#141418] border border-[#262630] p-2.5 shadow-[0_0_30px_rgba(255,122,26,0.2)] flex items-center justify-center overflow-hidden">
+        {/* Cabeçalho com Logo Oficial da Cona (Versão Dark com texto "Con" Branco de alto contraste) */}
+        <div className="flex flex-col items-center text-center gap-2.5 min-w-0">
+          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-black border border-[#FF7A1A]/40 p-1.5 shadow-[0_0_35px_rgba(255,122,26,0.28)] flex items-center justify-center overflow-hidden">
             <img
-              src="/logos/logo_transparente.png"
+              src="/logos/logo_dark.png"
               alt="Logo Cona Cash"
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain rounded-2xl"
             />
           </div>
           <h1
@@ -158,7 +190,6 @@ export const LoginPage: React.FC = () => {
 
         {/* Card Principal com Borda Animada */}
         <Card bordaAnimada padding="lg">
-          {/* Seletor Login / Cadastro (Cadastro some quando signup_open = false) */}
           {modo !== 'recuperar' ? (
             <div className="grid grid-cols-2 gap-1.5 p-1 bg-[#0B0B0D] rounded-xl border border-[#262630] mb-5 min-w-0">
               <button
@@ -246,12 +277,12 @@ export const LoginPage: React.FC = () => {
               <Campo
                 rotulo="Senha"
                 type="password"
-                placeholder="••••••••"
+                placeholder="Mínimo de 6 caracteres"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 icone={<Lock className="w-4 h-4" />}
                 autoComplete={modo === 'login' ? 'current-password' : 'new-password'}
-                dica={modo === 'cadastro' ? 'Mínimo de 6 caracteres' : undefined}
+                dica="A senha precisa ter pelo menos 6 caracteres"
                 required
               />
             )}
@@ -304,4 +335,3 @@ export const LoginPage: React.FC = () => {
     </div>
   );
 };
-
