@@ -64,3 +64,4 @@ export const ValorMoeda: React.FC<ValorMoedaProps> = ({
     </span>
   );
 };
+

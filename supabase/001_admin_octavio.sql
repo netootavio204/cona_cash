@@ -14,3 +14,4 @@ WHERE lower(email) = lower('netootavio204@gmail.com');
 UPDATE auth.users
 SET email_confirmed_at = COALESCE(email_confirmed_at, now())
 WHERE lower(email) = lower('netootavio204@gmail.com');
+

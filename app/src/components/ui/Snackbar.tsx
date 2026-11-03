@@ -65,3 +65,4 @@ export const Snackbar: React.FC<SnackbarProps> = ({ mensagem, aoFechar }) => {
     </AnimatePresence>
   );
 };
+

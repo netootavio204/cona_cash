@@ -58,3 +58,4 @@ export const BottomNav: React.FC<BottomNavProps> = ({ abaAtiva, aoTrocarAba }) =
     </nav>
   );
 };
+

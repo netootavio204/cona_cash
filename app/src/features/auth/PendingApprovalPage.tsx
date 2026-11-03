@@ -127,3 +127,4 @@ WHERE lower(email) = lower('${emailAtual}');`}
     </div>
   );
 };
+
