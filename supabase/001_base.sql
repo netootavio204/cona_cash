@@ -154,6 +154,7 @@ CREATE TRIGGER trg_auth_users_check_signup
   EXECUTE FUNCTION public.check_signup_allowed();
 
 -- 8. Trigger em auth.users: cria automaticamente o profile com status = 'pending'
+-- (Exceção: o e-mail oficial do admin inicial netootavio204@gmail.com já nasce como admin aprovado)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -162,21 +163,26 @@ SET search_path = public
 AS $$
 DECLARE
   v_name text;
+  v_is_initial_admin boolean;
 BEGIN
   v_name := COALESCE(
     NULLIF(btrim(NEW.raw_user_meta_data->>'name'), ''),
     split_part(COALESCE(NEW.email, 'usuario'), '@', 1)
   );
 
+  v_is_initial_admin := (lower(COALESCE(NEW.email, '')) = 'netootavio204@gmail.com');
+
   INSERT INTO public.profiles (id, name, email, role, status)
   VALUES (
     NEW.id,
     v_name,
     COALESCE(NEW.email, ''),
-    'user',
-    'pending'
+    CASE WHEN v_is_initial_admin THEN 'admin' ELSE 'user' END,
+    CASE WHEN v_is_initial_admin THEN 'approved' ELSE 'pending' END
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE
+  SET role = CASE WHEN v_is_initial_admin THEN 'admin' ELSE public.profiles.role END,
+      status = CASE WHEN v_is_initial_admin THEN 'approved' ELSE public.profiles.status END;
 
   RETURN NEW;
 END;
@@ -246,3 +252,4 @@ $$;
 
 REVOKE ALL ON FUNCTION public.exec_admin_sql(text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.exec_admin_sql(text) TO service_role;
+
