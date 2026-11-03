@@ -1,0 +1,22 @@
+# Variáveis de ambiente e chaves secretas (NUNCA versionar!)
+.env
+.env.*
+!.env.example
+app/.env
+app/.env.*
+!app/.env.example
+
+# Dependências e builds
+node_modules/
+app/node_modules/
+dist/
+app/dist/
+.vercel/
+app/.vercel/
+
+# Arquivos pesados de edição / sistema
+*.psd
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+*.log
