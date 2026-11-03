@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Lock, User as UserIcon, KeyRound, ShieldAlert, ArrowLeft } from 'lucide-react';
-import { supabase } from '../../api/supabase';
+import { supabase, normalizarSenhaSupabase } from '../../api/supabase';
 import { useAuth } from './AuthContext';
 import { Card } from '../../components/ui/Card';
 import { Campo } from '../../components/ui/Campo';
@@ -56,15 +56,6 @@ export const LoginPage: React.FC = () => {
       return 'Confirme seu e-mail antes de entrar ou peça aprovação ao administrador.';
     }
     return msg;
-  };
-
-  const normalizarSenhaSupabase = (raw: string): string => {
-    // O Supabase Auth exige no mínimo 6 caracteres internamente.
-    // Completamos de forma determinística caso o usuário prefira uma senha curta (ex: 4 ou 5 caracteres).
-    if (raw.length > 0 && raw.length < 6) {
-      return `${raw}_cona6`;
-    }
-    return raw;
   };
 
   const aoSubmeter = async (e: React.FormEvent) => {

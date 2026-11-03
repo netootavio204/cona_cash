@@ -1,12 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 import type {
   Account,
+  AccountBalance,
   AccountType,
   AppSettings,
+  AuditLogEntry,
   Category,
   CategoryIconName,
   PaymentMethod,
   Profile,
+  Transaction,
+  TransactionKind,
   UserStatus,
 } from '../types/database';
 
@@ -31,6 +35,19 @@ export const supabase = createClient(
   }
 );
 
+export function normalizarSenhaSupabase(raw: string): string {
+  if (raw.length > 0 && raw.length < 6) {
+    return `${raw}_cona6`;
+  }
+  return raw;
+}
+
+export async function updateMyPassword(novaSenhaBruta: string): Promise<void> {
+  const password = normalizarSenhaSupabase(novaSenhaBruta);
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) throw error;
+}
+
 export async function fetchAppSettings(): Promise<AppSettings> {
   const { data, error } = await supabase
     .from('app_settings')
@@ -42,8 +59,8 @@ export async function fetchAppSettings(): Promise<AppSettings> {
     return {
       id: 1,
       signup_open: true,
-      schema_version: '002_config',
-      app_version: 'v0.2.0 beta',
+      schema_version: '003_transactions',
+      app_version: 'v0.3.0 beta',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -59,10 +76,7 @@ export async function fetchMyProfile(userId: string): Promise<Profile | null> {
     .eq('id', userId)
     .maybeSingle();
 
-  if (error) {
-    throw error;
-  }
-
+  if (error) throw error;
   return (data as Profile) || null;
 }
 
@@ -81,15 +95,12 @@ export async function updateMyPreferences(
   return data as Profile;
 }
 
-/**
- * Garante que o usuário aprovado já tenha as Contas, Formas de Pagamento e Categorias padrão criadas.
- */
 export async function ensureMyDefaults(): Promise<void> {
   await supabase.rpc('ensure_my_defaults');
 }
 
 // ============================================================================
-// CONTAS (accounts)
+// CONTAS E SALDOS POR CONTA (accounts & get_account_balances)
 // ============================================================================
 
 export async function fetchAccounts(): Promise<Account[]> {
@@ -104,6 +115,24 @@ export async function fetchAccounts(): Promise<Account[]> {
     ...a,
     initial_balance_cents: Number(a.initial_balance_cents ?? 0),
   })) as Account[];
+}
+
+export async function fetchAccountBalances(): Promise<AccountBalance[]> {
+  const { data, error } = await supabase.rpc('get_account_balances');
+  if (error) throw error;
+  return (data || []).map((row: any) => ({
+    account_id: row.account_id,
+    account_name: row.account_name,
+    account_type: row.account_type as AccountType,
+    account_color: row.account_color,
+    archived: Boolean(row.archived),
+    initial_balance_cents: Number(row.initial_balance_cents ?? 0),
+    income_net_cents: Number(row.income_net_cents ?? 0),
+    expense_cents: Number(row.expense_cents ?? 0),
+    transfer_in_cents: Number(row.transfer_in_cents ?? 0),
+    transfer_out_cents: Number(row.transfer_out_cents ?? 0),
+    current_balance_cents: Number(row.current_balance_cents ?? 0),
+  }));
 }
 
 export async function createAccount(payload: {
@@ -311,6 +340,224 @@ export async function updateCategory(
 export async function deleteCategory(id: string): Promise<void> {
   const { error } = await supabase.from('categories').delete().eq('id', id);
   if (error) throw error;
+}
+
+// ============================================================================
+// LANÇAMENTOS, LOTE DO DIA, LIXEIRA E AUDITORIA (Fase 3)
+// ============================================================================
+
+function normalizeTransaction(row: any): Transaction {
+  return {
+    ...row,
+    gross_cents: Number(row.gross_cents ?? 0),
+    fee_cents: Number(row.fee_cents ?? 0),
+    net_cents: Number(row.net_cents ?? 0),
+  };
+}
+
+export interface FetchTransactionsFilter {
+  page?: number;
+  pageSize?: number;
+  kind?: TransactionKind | 'all';
+  accountId?: string;
+  categoryId?: string;
+  startDateISO?: string;
+  endDateISO?: string;
+  search?: string;
+  onlyTrash?: boolean;
+}
+
+export async function fetchTransactions(
+  filter: FetchTransactionsFilter = {}
+): Promise<{ data: Transaction[]; count: number }> {
+  const page = Math.max(1, filter.page ?? 1);
+  const pageSize = filter.pageSize ?? 50;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let query = supabase
+    .from('transactions')
+    .select('*', { count: 'exact' });
+
+  if (filter.onlyTrash) {
+    query = query.not('deleted_at', 'is', null);
+  } else {
+    query = query.is('deleted_at', null);
+  }
+
+  if (filter.kind && filter.kind !== 'all') {
+    query = query.eq('kind', filter.kind);
+  }
+
+  if (filter.accountId) {
+    query = query.or(
+      `account_id.eq.${filter.accountId},to_account_id.eq.${filter.accountId}`
+    );
+  }
+
+  if (filter.categoryId) {
+    query = query.eq('category_id', filter.categoryId);
+  }
+
+  if (filter.startDateISO) {
+    query = query.gte('occurred_at', filter.startDateISO);
+  }
+
+  if (filter.endDateISO) {
+    query = query.lte('occurred_at', filter.endDateISO);
+  }
+
+  if (filter.search && filter.search.trim()) {
+    query = query.ilike('note', `%${filter.search.trim()}%`);
+  }
+
+  const { data, error, count } = await query
+    .order('occurred_at', { ascending: false })
+    .order('created_at', { ascending: false })
+    .range(from, to);
+
+  if (error) throw error;
+  return {
+    data: (data || []).map(normalizeTransaction),
+    count: count ?? 0,
+  };
+}
+
+export async function createTransaction(payload: {
+  user_id: string;
+  kind: TransactionKind;
+  occurred_at: string;
+  account_id: string;
+  to_account_id?: string | null;
+  payment_method_id?: string | null;
+  category_id?: string | null;
+  gross_cents: number;
+  fee_cents?: number;
+  net_cents: number;
+  note?: string;
+}): Promise<Transaction> {
+  const gross = Math.round(payload.gross_cents);
+  const fee = payload.kind === 'income' ? Math.round(payload.fee_cents ?? 0) : 0;
+  const net = payload.kind === 'income' ? gross - fee : gross;
+
+  const { data, error } = await supabase
+    .from('transactions')
+    .insert({
+      user_id: payload.user_id,
+      kind: payload.kind,
+      occurred_at: payload.occurred_at,
+      account_id: payload.account_id,
+      to_account_id: payload.kind === 'transfer' ? payload.to_account_id : null,
+      payment_method_id:
+        payload.kind === 'income' ? payload.payment_method_id || null : null,
+      category_id:
+        payload.kind === 'expense' ? payload.category_id || null : null,
+      gross_cents: gross,
+      fee_cents: fee,
+      net_cents: net,
+      note: (payload.note || '').trim(),
+    })
+    .select('*')
+    .single();
+
+  if (error) throw error;
+  return normalizeTransaction(data);
+}
+
+export async function createIncomeBatch(payload: {
+  occurred_at: string;
+  note: string;
+  items: {
+    gross_cents: number;
+    fee_cents: number;
+    net_cents: number;
+    account_id: string;
+    payment_method_id: string | null;
+    note?: string;
+  }[];
+}): Promise<string> {
+  const { data, error } = await supabase.rpc('insert_income_batch', {
+    p_occurred_at: payload.occurred_at,
+    p_note: payload.note.trim(),
+    p_items: payload.items,
+  });
+
+  if (error) throw error;
+  return data as string;
+}
+
+export async function updateTransaction(
+  id: string,
+  payload: {
+    kind: TransactionKind;
+    occurred_at: string;
+    account_id: string;
+    to_account_id?: string | null;
+    payment_method_id?: string | null;
+    category_id?: string | null;
+    gross_cents: number;
+    fee_cents?: number;
+    note?: string;
+  }
+): Promise<Transaction> {
+  const gross = Math.round(payload.gross_cents);
+  const fee = payload.kind === 'income' ? Math.round(payload.fee_cents ?? 0) : 0;
+  const net = payload.kind === 'income' ? gross - fee : gross;
+
+  const { data, error } = await supabase
+    .from('transactions')
+    .update({
+      kind: payload.kind,
+      occurred_at: payload.occurred_at,
+      account_id: payload.account_id,
+      to_account_id: payload.kind === 'transfer' ? payload.to_account_id : null,
+      payment_method_id:
+        payload.kind === 'income' ? payload.payment_method_id || null : null,
+      category_id:
+        payload.kind === 'expense' ? payload.category_id || null : null,
+      gross_cents: gross,
+      fee_cents: fee,
+      net_cents: net,
+      note: (payload.note || '').trim(),
+    })
+    .eq('id', id)
+    .select('*')
+    .single();
+
+  if (error) throw error;
+  return normalizeTransaction(data);
+}
+
+export async function softDeleteTransaction(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('transactions')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+export async function restoreTransaction(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('transactions')
+    .update({ deleted_at: null })
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+export async function fetchTransactionAuditLog(
+  recordId: string
+): Promise<AuditLogEntry[]> {
+  const { data, error } = await supabase
+    .from('audit_log')
+    .select('*')
+    .eq('table_name', 'transactions')
+    .eq('record_id', recordId)
+    .order('at', { ascending: false });
+
+  if (error) throw error;
+  return (data || []) as AuditLogEntry[];
 }
 
 // ============================================================================

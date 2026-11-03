@@ -15,8 +15,6 @@ export function formatCentsToBRL(cents: number): string {
 
 /**
  * Versão compacta para cards pequenos quando o valor é grande (PRD 7.1)
- * Ex: 1250000 (R$ 12.500,00) -> "R$ 12,5 mil"
- * Ex: 150000000 (R$ 1.500.000,00) -> "R$ 1,5 mi"
  */
 export function formatCentsToCompactBRL(cents: number): string {
   const safeCents = Number.isFinite(Number(cents)) ? Math.round(Number(cents)) : 0;
@@ -46,12 +44,10 @@ export function formatCentsToCompactBRL(cents: number): string {
 /**
  * Máscara estilo caixa eletrônico/banco para campos de moeda R$:
  * Extrai apenas os dígitos e interpreta como centavos inteiros.
- * Ex: "1250" -> 1250 (R$ 12,50). Nunca usa float!
  */
 export function parseDigitsToCents(raw: string): number {
   const digits = raw.replace(/\D/g, '');
   if (!digits) return 0;
-  // Limite seguro de 12 dígitos (R$ 9.999.999.999,99)
   const clipped = digits.slice(0, 12);
   return parseInt(clipped, 10) || 0;
 }
@@ -78,4 +74,86 @@ export function formatFeePercent(fee: number): string {
     minimumFractionDigits: safe % 1 === 0 ? 0 : 2,
     maximumFractionDigits: 2,
   })}%`;
+}
+
+/**
+ * Calcula taxa (em centavos) e valor líquido (em centavos) a partir do valor bruto e da taxa %.
+ * Garante sempre: grossCents - feeCents = netCents.
+ */
+export function calculateFeeAndNetFromPercent(
+  grossCents: number,
+  feePercent: number
+): { feeCents: number; netCents: number } {
+  const safeGross = Math.max(0, Math.round(Number(grossCents) || 0));
+  const safePct = Math.min(100, Math.max(0, Number(feePercent) || 0));
+  const feeCents = Math.min(safeGross, Math.round((safeGross * safePct) / 100));
+  const netCents = safeGross - feeCents;
+  return { feeCents, netCents };
+}
+
+/**
+ * Formata data/hora ISO para exibição em America/Sao_Paulo (ex: "03/11/2026, 14:30")
+ */
+export function formatDateTimeBR(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return iso;
+  }
+}
+
+/**
+ * Gera string "YYYY-MM-DDTHH:mm" no fuso America/Sao_Paulo para <input type="datetime-local" />
+ */
+export function toSaoPauloDateTimeLocal(date: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+
+  const map: Record<string, string> = {};
+  for (const p of parts) {
+    map[p.type] = p.value;
+  }
+  return `${map.year}-${map.month}-${map.day}T${map.hour}:${map.minute}`;
+}
+
+/**
+ * Converte valor de <input type="datetime-local" /> (considerado em America/Sao_Paulo -03:00) para ISO UTC
+ */
+export function fromSaoPauloDateTimeLocalToISO(localStr: string): string {
+  if (!localStr) return new Date().toISOString();
+  // Se não tiver fuso explícito, assume -03:00 (America/Sao_Paulo)
+  const withOffset =
+    localStr.length === 16 ? `${localStr}:00-03:00` : `${localStr}-03:00`;
+  const parsed = new Date(withOffset);
+  return Number.isNaN(parsed.getTime())
+    ? new Date().toISOString()
+    : parsed.toISOString();
+}
+
+/**
+ * Retorna o início e o fim do dia de hoje no fuso America/Sao_Paulo em ISO UTC
+ */
+export function getTodaySaoPauloBoundsISO(now: Date = new Date()): {
+  startISO: string;
+  endISO: string;
+} {
+  const datePart = toSaoPauloDateTimeLocal(now).slice(0, 10);
+  const startISO = new Date(`${datePart}T00:00:00.000-03:00`).toISOString();
+  const endISO = new Date(`${datePart}T23:59:59.999-03:00`).toISOString();
+  return { startISO, endISO };
 }

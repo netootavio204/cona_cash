@@ -5,9 +5,10 @@ import {
   parseDigitsToCents,
   parseFeePercent,
   formatFeePercent,
+  calculateFeeAndNetFromPercent,
 } from './format';
 
-describe('Formatação de moeda em centavos e taxas (PRD 5, 7.1 e Fase 2)', () => {
+describe('Formatação de moeda em centavos e taxas (PRD 5, 7.1, Fase 2 e Fase 3)', () => {
   it('formata valores inteiros em centavos para R$ corretamente', () => {
     expect(formatCentsToBRL(0)).toContain('0,00');
     expect(formatCentsToBRL(1050)).toContain('10,50');
@@ -34,5 +35,16 @@ describe('Formatação de moeda em centavos e taxas (PRD 5, 7.1 e Fase 2)', () =
     expect(parseFeePercent('-1')).toBeNull();
     expect(formatFeePercent(3.49)).toBe('3,49%');
     expect(formatFeePercent(0)).toBe('0%');
+  });
+
+  it('calcula bruto - taxa = liquido perfeitamente em centavos', () => {
+    const r1 = calculateFeeAndNetFromPercent(10000, 3.49);
+    expect(r1.feeCents).toBe(349);
+    expect(r1.netCents).toBe(9651);
+    expect(r1.feeCents + r1.netCents).toBe(10000);
+
+    const r2 = calculateFeeAndNetFromPercent(5000, 0);
+    expect(r2.feeCents).toBe(0);
+    expect(r2.netCents).toBe(5000);
   });
 });

@@ -36,6 +36,7 @@ import {
   updateCategory,
   deleteCategory,
   updateMyPreferences,
+  updateMyPassword,
   fetchAllProfilesAdmin,
   updateUserStatusAdmin,
   updateSignupOpenAdmin,
@@ -413,6 +414,34 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
     perfil?.week_starts_on ?? 1
   );
   const [salvandoPref, setSalvandoPref] = useState(false);
+
+  // Alteração de senha direto nas Preferências
+  const [novaSenha, setNovaSenha] = useState('');
+  const [confirmarNovaSenha, setConfirmarNovaSenha] = useState('');
+  const [salvandoSenha, setSalvandoSenha] = useState(false);
+
+  const salvarNovaSenha = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!novaSenha) {
+      onShowToast('Digite a nova senha.', 'erro');
+      return;
+    }
+    if (novaSenha !== confirmarNovaSenha) {
+      onShowToast('A confirmação da senha não confere.', 'erro');
+      return;
+    }
+    setSalvandoSenha(true);
+    try {
+      await updateMyPassword(novaSenha);
+      setNovaSenha('');
+      setConfirmarNovaSenha('');
+      onShowToast('Sua senha foi alterada com sucesso!', 'sucesso');
+    } catch (err: any) {
+      onShowToast(err?.message || 'Não foi possível alterar a senha.', 'erro');
+    } finally {
+      setSalvandoSenha(false);
+    }
+  };
 
   useEffect(() => {
     if (perfil) {
@@ -920,128 +949,175 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
       )}
 
       {/* ====================================================================
-          SEÇÃO 4: PREFERÊNCIAS DO USUÁRIO
+          SEÇÃO 4: PREFERÊNCIAS DO USUÁRIO + ALTERAR SENHA
       ==================================================================== */}
       {secao === 'preferencias' && (
-        <Card bordaAnimada padding="lg">
-          <form
-            onSubmit={salvarPreferencias}
-            className="flex flex-col gap-4 min-w-0"
-          >
-            <h2 className="text-base font-bold text-white truncate">
-              Preferências do App
-            </h2>
+        <div className="flex flex-col gap-4 min-w-0">
+          <Card bordaAnimada padding="lg">
+            <form
+              onSubmit={salvarPreferencias}
+              className="flex flex-col gap-4 min-w-0"
+            >
+              <h2 className="text-base font-bold text-white truncate">
+                Preferências do App
+              </h2>
 
-            <Campo
-              rotulo="Seu nome de exibição"
-              value={prefNome}
-              onChange={(e) => setPrefNome(e.target.value)}
-              placeholder="Ex.: Octavio"
-            />
+              <Campo
+                rotulo="Seu nome de exibição"
+                value={prefNome}
+                onChange={(e) => setPrefNome(e.target.value)}
+                placeholder="Ex.: Octavio"
+              />
 
-            {/* Som ligado/desligado */}
-            <div className="p-3.5 rounded-xl bg-[#0B0B0D] border border-[#262630] flex items-center justify-between gap-3 min-w-0">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-[#FF7A1A]/15 text-[#FF7A1A] flex items-center justify-center shrink-0">
-                  {prefSom ? (
-                    <Volume2 className="w-5 h-5" />
-                  ) : (
-                    <VolumeX className="w-5 h-5" />
-                  )}
+              {/* Som ligado/desligado */}
+              <div className="p-3.5 rounded-xl bg-[#0B0B0D] border border-[#262630] flex items-center justify-between gap-3 min-w-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-[#FF7A1A]/15 text-[#FF7A1A] flex items-center justify-center shrink-0">
+                    {prefSom ? (
+                      <Volume2 className="w-5 h-5" />
+                    ) : (
+                      <VolumeX className="w-5 h-5" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-white truncate">
+                      Sons de conquista (Metas)
+                    </p>
+                    <p className="text-xs text-[#9A9AA6] truncate">
+                      {prefSom
+                        ? 'Ligado (toca som ao bater meta)'
+                        : 'Desligado (silencioso)'}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-white truncate">
-                    Sons de conquista (Metas)
-                  </p>
-                  <p className="text-xs text-[#9A9AA6] truncate">
-                    {prefSom
-                      ? 'Ligado (toca som ao bater meta)'
-                      : 'Desligado (silencioso)'}
-                  </p>
+
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={prefSom}
+                  onClick={() => setPrefSom((v) => !v)}
+                  className={[
+                    'w-14 h-8 rounded-full p-1 transition-colors shrink-0 flex items-center',
+                    prefSom ? 'bg-[#2EE59D]' : 'bg-[#262630]',
+                  ].join(' ')}
+                >
+                  <span
+                    className={[
+                      'w-6 h-6 rounded-full bg-[#0B0B0D] shadow transition-transform',
+                      prefSom ? 'translate-x-6' : 'translate-x-0',
+                    ].join(' ')}
+                  />
+                </button>
+              </div>
+
+              {/* Primeiro dia da semana */}
+              <div className="p-3.5 rounded-xl bg-[#0B0B0D] border border-[#262630] flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-[#FF7A1A]/15 text-[#FF7A1A] flex items-center justify-center shrink-0">
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-white truncate">
+                      Primeiro dia da semana
+                    </p>
+                    <p className="text-xs text-[#9A9AA6] truncate">
+                      Define o início dos relatórios e metas semanais
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-1.5 bg-[#141418] p-1 rounded-xl border border-[#262630] shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setPrefDiaSemana(1)}
+                    className={[
+                      'min-h-[38px] px-3 rounded-lg text-xs font-bold transition-colors',
+                      prefDiaSemana === 1
+                        ? 'bg-[#FF7A1A] text-[#0B0B0D]'
+                        : 'text-[#9A9AA6] hover:text-white',
+                    ].join(' ')}
+                  >
+                    Segunda
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPrefDiaSemana(0)}
+                    className={[
+                      'min-h-[38px] px-3 rounded-lg text-xs font-bold transition-colors',
+                      prefDiaSemana === 0
+                        ? 'bg-[#FF7A1A] text-[#0B0B0D]'
+                        : 'text-[#9A9AA6] hover:text-white',
+                    ].join(' ')}
+                  >
+                    Domingo
+                  </button>
                 </div>
               </div>
 
-              <button
-                type="button"
-                role="switch"
-                aria-checked={prefSom}
-                onClick={() => setPrefSom((v) => !v)}
-                className={[
-                  'w-14 h-8 rounded-full p-1 transition-colors shrink-0 flex items-center',
-                  prefSom ? 'bg-[#2EE59D]' : 'bg-[#262630]',
-                ].join(' ')}
-              >
-                <span
-                  className={[
-                    'w-6 h-6 rounded-full bg-[#0B0B0D] shadow transition-transform',
-                    prefSom ? 'translate-x-6' : 'translate-x-0',
-                  ].join(' ')}
+              {/* Informações do Sistema */}
+              <div className="p-3 rounded-xl bg-[#0B0B0D]/60 border border-[#262630] text-xs text-[#9A9AA6] flex flex-wrap items-center justify-between gap-2">
+                <span>Moeda padrão: Real (R$)</span>
+                <span>Fuso: America/Sao_Paulo</span>
+                <span className="text-[#FF7A1A] font-bold">
+                  {APP_NAME} {APP_VERSION}
+                </span>
+              </div>
+
+              <Botao
+                type="submit"
+                variante="primario"
+                larguraTotal
+                carregando={salvandoPref}
+                texto="Salvar minhas preferências"
+              />
+            </form>
+          </Card>
+
+          {/* Card para Alterar a Senha */}
+          <Card padding="lg">
+            <form
+              onSubmit={salvarNovaSenha}
+              className="flex flex-col gap-4 min-w-0"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <Lock className="w-4 h-4 text-[#FF7A1A] shrink-0" />
+                <h2 className="text-base font-bold text-white truncate">
+                  Alterar Minha Senha
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-0">
+                <Campo
+                  rotulo="Nova senha"
+                  type="password"
+                  placeholder="Digite a nova senha"
+                  value={novaSenha}
+                  onChange={(e) => setNovaSenha(e.target.value)}
+                  autoComplete="new-password"
+                  required
                 />
-              </button>
-            </div>
-
-            {/* Primeiro dia da semana */}
-            <div className="p-3.5 rounded-xl bg-[#0B0B0D] border border-[#262630] flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-[#FF7A1A]/15 text-[#FF7A1A] flex items-center justify-center shrink-0">
-                  <Calendar className="w-5 h-5" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-white truncate">
-                    Primeiro dia da semana
-                  </p>
-                  <p className="text-xs text-[#9A9AA6] truncate">
-                    Define o início dos relatórios e metas semanais
-                  </p>
-                </div>
+                <Campo
+                  rotulo="Confirmar nova senha"
+                  type="password"
+                  placeholder="Repita a nova senha"
+                  value={confirmarNovaSenha}
+                  onChange={(e) => setConfirmarNovaSenha(e.target.value)}
+                  autoComplete="new-password"
+                  required
+                />
               </div>
 
-              <div className="grid grid-cols-2 gap-1.5 bg-[#141418] p-1 rounded-xl border border-[#262630] shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setPrefDiaSemana(1)}
-                  className={[
-                    'min-h-[38px] px-3 rounded-lg text-xs font-bold transition-colors',
-                    prefDiaSemana === 1
-                      ? 'bg-[#FF7A1A] text-[#0B0B0D]'
-                      : 'text-[#9A9AA6] hover:text-white',
-                  ].join(' ')}
-                >
-                  Segunda
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPrefDiaSemana(0)}
-                  className={[
-                    'min-h-[38px] px-3 rounded-lg text-xs font-bold transition-colors',
-                    prefDiaSemana === 0
-                      ? 'bg-[#FF7A1A] text-[#0B0B0D]'
-                      : 'text-[#9A9AA6] hover:text-white',
-                  ].join(' ')}
-                >
-                  Domingo
-                </button>
-              </div>
-            </div>
-
-            {/* Informações do Sistema */}
-            <div className="p-3 rounded-xl bg-[#0B0B0D]/60 border border-[#262630] text-xs text-[#9A9AA6] flex flex-wrap items-center justify-between gap-2">
-              <span>Moeda padrão: Real (R$)</span>
-              <span>Fuso: America/Sao_Paulo</span>
-              <span className="text-[#FF7A1A] font-bold">
-                {APP_NAME} {APP_VERSION}
-              </span>
-            </div>
-
-            <Botao
-              type="submit"
-              variante="primario"
-              larguraTotal
-              carregando={salvandoPref}
-              texto="Salvar minhas preferências"
-            />
-          </form>
-        </Card>
+              <Botao
+                type="submit"
+                variante="secundario"
+                larguraTotal
+                carregando={salvandoSenha}
+                icone={<Lock className="w-4 h-4 text-[#FF7A1A]" />}
+                texto="Atualizar minha senha"
+              />
+            </form>
+          </Card>
+        </div>
       )}
 
       {/* ====================================================================
