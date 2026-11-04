@@ -1,0 +1,318 @@
+{
+  "exported_at": "2026-11-04T18:57:23.110Z",
+  "phase": "pre-fase-5",
+  "data": {
+    "app_settings": [
+      {
+        "id": 1,
+        "signup_open": true,
+        "schema_version": "004_reports",
+        "app_version": "v0.4.0 beta",
+        "created_at": "2026-11-03T16:24:00.585628+00:00",
+        "updated_at": "2026-11-04T18:03:48.089309+00:00"
+      }
+    ],
+    "profiles": [
+      {
+        "id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Octavio",
+        "email": "netootavio204@gmail.com",
+        "role": "admin",
+        "status": "approved",
+        "sound_enabled": true,
+        "week_starts_on": 1,
+        "created_at": "2026-11-03T17:53:29.439452+00:00",
+        "updated_at": "2026-11-03T17:53:29.439452+00:00",
+        "quick_tags": [
+          "#Filamento",
+          "#MercadoLivre",
+          "#99",
+          "#Gasolina",
+          "#Almoço"
+        ]
+      }
+    ],
+    "accounts": [
+      {
+        "id": "fa5d4736-4962-4d82-9d5c-f193c3131e59",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Conta 1",
+        "type": "bank",
+        "initial_balance_cents": 0,
+        "color": "#FF7A1A",
+        "archived": false,
+        "created_at": "2026-11-03T17:53:29.439452+00:00",
+        "updated_at": "2026-11-03T17:53:29.439452+00:00"
+      },
+      {
+        "id": "00893ba7-7741-4bd2-994b-2e72d85e6f0f",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Conta 2",
+        "type": "bank",
+        "initial_balance_cents": 0,
+        "color": "#38BDF8",
+        "archived": false,
+        "created_at": "2026-11-03T17:53:29.439452+00:00",
+        "updated_at": "2026-11-03T17:53:29.439452+00:00"
+      },
+      {
+        "id": "d4808e05-8029-427c-a130-a32dd2187365",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Conta 3",
+        "type": "bank",
+        "initial_balance_cents": 0,
+        "color": "#A855F7",
+        "archived": false,
+        "created_at": "2026-11-03T17:53:29.439452+00:00",
+        "updated_at": "2026-11-03T17:53:29.439452+00:00"
+      },
+      {
+        "id": "2e8a01ef-70bc-4244-9074-a6002b96b0bd",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Bolso (dinheiro)",
+        "type": "cash",
+        "initial_balance_cents": 0,
+        "color": "#2EE59D",
+        "archived": false,
+        "created_at": "2026-11-03T17:53:29.439452+00:00",
+        "updated_at": "2026-11-03T17:53:29.439452+00:00"
+      }
+    ],
+    "categories": [
+      {
+        "id": "9099f2e2-2186-4220-8fe2-e1c9d6cc2522",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Filamento",
+        "icon": "cog",
+        "color": "#FF7A1A",
+        "archived": false,
+        "created_at": "2026-11-04T18:47:37.894726+00:00",
+        "updated_at": "2026-11-04T18:47:37.894726+00:00"
+      },
+      {
+        "id": "91dfcfdc-72a3-4948-b7cb-45d0b5627036",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Manutenção da impressora",
+        "icon": "wrench",
+        "color": "#A855F7",
+        "archived": false,
+        "created_at": "2026-11-04T18:47:37.894726+00:00",
+        "updated_at": "2026-11-04T18:47:37.894726+00:00"
+      },
+      {
+        "id": "cbdeca14-8be9-42dd-8315-59e138c29818",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Embalagem",
+        "icon": "shopping-bag",
+        "color": "#38BDF8",
+        "archived": false,
+        "created_at": "2026-11-04T18:47:37.894726+00:00",
+        "updated_at": "2026-11-04T18:47:37.894726+00:00"
+      },
+      {
+        "id": "d1db5121-8fa7-4760-8037-d9f57e8b4c68",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Frete",
+        "icon": "car",
+        "color": "#2EE59D",
+        "archived": false,
+        "created_at": "2026-11-04T18:47:37.894726+00:00",
+        "updated_at": "2026-11-04T18:47:37.894726+00:00"
+      },
+      {
+        "id": "a3977e21-0b1a-492f-a8de-4bb582f03be8",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Taxas de marketplace",
+        "icon": "receipt",
+        "color": "#FFC940",
+        "archived": false,
+        "created_at": "2026-11-04T18:47:37.894726+00:00",
+        "updated_at": "2026-11-04T18:47:37.894726+00:00"
+      },
+      {
+        "id": "e08f728b-549c-40fc-ba9b-ccd49d64a1c4",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Abastecimento",
+        "icon": "fuel",
+        "color": "#FF7A1A",
+        "archived": false,
+        "created_at": "2026-11-03T17:53:29.439452+00:00",
+        "updated_at": "2026-11-03T17:53:29.439452+00:00"
+      },
+      {
+        "id": "1021c482-6330-4ebb-892c-ef74ba931b4a",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Alimentação",
+        "icon": "utensils",
+        "color": "#FFC940",
+        "archived": false,
+        "created_at": "2026-11-03T17:53:29.439452+00:00",
+        "updated_at": "2026-11-03T17:53:29.439452+00:00"
+      },
+      {
+        "id": "5c5ed479-99af-48f7-8f4e-4345a905a2da",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Peça de carro",
+        "icon": "cog",
+        "color": "#38BDF8",
+        "archived": false,
+        "created_at": "2026-11-03T17:53:29.439452+00:00",
+        "updated_at": "2026-11-03T17:53:29.439452+00:00"
+      },
+      {
+        "id": "4abbdc51-70e3-4ced-81fc-14b720243df4",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Manutenção",
+        "icon": "wrench",
+        "color": "#A855F7",
+        "archived": false,
+        "created_at": "2026-11-03T17:53:29.439452+00:00",
+        "updated_at": "2026-11-03T17:53:29.439452+00:00"
+      },
+      {
+        "id": "0c810f7f-f55b-43fe-b69f-3c69cb004847",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Lavagem",
+        "icon": "droplets",
+        "color": "#2EE59D",
+        "archived": false,
+        "created_at": "2026-11-03T17:53:29.439452+00:00",
+        "updated_at": "2026-11-03T17:53:29.439452+00:00"
+      },
+      {
+        "id": "a4a51f85-b530-4b71-b8cc-4d5fcdf271da",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Gasto avulso",
+        "icon": "receipt",
+        "color": "#FF3B30",
+        "archived": false,
+        "created_at": "2026-11-03T17:53:29.439452+00:00",
+        "updated_at": "2026-11-03T17:53:29.439452+00:00"
+      }
+    ],
+    "payment_methods": [
+      {
+        "id": "2bc6cf5b-dece-4b4a-8f42-09ef4583fcad",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Maquininha (cartão)",
+        "default_account_id": "fa5d4736-4962-4d82-9d5c-f193c3131e59",
+        "fee_percent": 0,
+        "archived": false,
+        "created_at": "2026-11-03T17:53:29.439452+00:00",
+        "updated_at": "2026-11-03T17:53:29.439452+00:00"
+      },
+      {
+        "id": "e12fec2d-a8fc-4b92-b8ad-27a82b35dfad",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Pix",
+        "default_account_id": "00893ba7-7741-4bd2-994b-2e72d85e6f0f",
+        "fee_percent": 0,
+        "archived": false,
+        "created_at": "2026-11-03T17:53:29.439452+00:00",
+        "updated_at": "2026-11-03T17:53:29.439452+00:00"
+      },
+      {
+        "id": "76a626f5-6f2f-4610-9ac1-f8c6b91de332",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Online (app)",
+        "default_account_id": "d4808e05-8029-427c-a130-a32dd2187365",
+        "fee_percent": 0,
+        "archived": false,
+        "created_at": "2026-11-03T17:53:29.439452+00:00",
+        "updated_at": "2026-11-03T17:53:29.439452+00:00"
+      },
+      {
+        "id": "9b65e561-700f-4840-b326-6e0ec99d0f61",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Dinheiro",
+        "default_account_id": "2e8a01ef-70bc-4244-9074-a6002b96b0bd",
+        "fee_percent": 0,
+        "archived": false,
+        "created_at": "2026-11-03T17:53:29.439452+00:00",
+        "updated_at": "2026-11-03T17:53:29.439452+00:00"
+      }
+    ],
+    "income_sources": [
+      {
+        "id": "e18237d9-2199-425a-a5f7-8242f34dee88",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Corridas (99)",
+        "icon": "car",
+        "color": "#FF7A1A",
+        "counts_as_earning": true,
+        "default_payment_method_id": "76a626f5-6f2f-4610-9ac1-f8c6b91de332",
+        "default_account_id": "d4808e05-8029-427c-a130-a32dd2187365",
+        "archived": false,
+        "created_at": "2026-11-04T12:49:46.284297+00:00",
+        "updated_at": "2026-11-04T12:49:46.284297+00:00"
+      },
+      {
+        "id": "22331f9e-0d86-4db1-9791-b61519a92bd0",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Venda 3D — Mercado Livre",
+        "icon": "shopping-bag",
+        "color": "#FFC940",
+        "counts_as_earning": true,
+        "default_payment_method_id": "76a626f5-6f2f-4610-9ac1-f8c6b91de332",
+        "default_account_id": "fa5d4736-4962-4d82-9d5c-f193c3131e59",
+        "archived": false,
+        "created_at": "2026-11-04T12:49:46.284297+00:00",
+        "updated_at": "2026-11-04T12:49:46.284297+00:00"
+      },
+      {
+        "id": "50f4f5cb-e996-4d92-8587-d29a2a82ec22",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Venda 3D — Presencial",
+        "icon": "tag",
+        "color": "#38BDF8",
+        "counts_as_earning": true,
+        "default_payment_method_id": "e12fec2d-a8fc-4b92-b8ad-27a82b35dfad",
+        "default_account_id": "d4808e05-8029-427c-a130-a32dd2187365",
+        "archived": false,
+        "created_at": "2026-11-04T12:49:46.284297+00:00",
+        "updated_at": "2026-11-04T12:49:46.284297+00:00"
+      },
+      {
+        "id": "e90956e2-ff99-4feb-a1d6-10e79f81b971",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Venda 3D — Bares e mercados",
+        "icon": "shopping-bag",
+        "color": "#A855F7",
+        "counts_as_earning": true,
+        "default_payment_method_id": "2bc6cf5b-dece-4b4a-8f42-09ef4583fcad",
+        "default_account_id": "00893ba7-7741-4bd2-994b-2e72d85e6f0f",
+        "archived": false,
+        "created_at": "2026-11-04T12:49:46.284297+00:00",
+        "updated_at": "2026-11-04T12:49:46.284297+00:00"
+      },
+      {
+        "id": "2b3af991-b8db-4586-b516-717c9e12bf72",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Outros ganhos",
+        "icon": "receipt",
+        "color": "#2EE59D",
+        "counts_as_earning": true,
+        "default_payment_method_id": "e12fec2d-a8fc-4b92-b8ad-27a82b35dfad",
+        "default_account_id": "d4808e05-8029-427c-a130-a32dd2187365",
+        "archived": false,
+        "created_at": "2026-11-04T12:49:46.284297+00:00",
+        "updated_at": "2026-11-04T12:49:46.284297+00:00"
+      },
+      {
+        "id": "123618c7-3c61-44de-ba9b-89c8f4464d71",
+        "user_id": "fd85c441-7737-4051-9677-5efa65b7932f",
+        "name": "Aporte",
+        "icon": "wallet",
+        "color": "#06B6D4",
+        "counts_as_earning": false,
+        "default_payment_method_id": "9b65e561-700f-4840-b326-6e0ec99d0f61",
+        "default_account_id": "2e8a01ef-70bc-4244-9074-a6002b96b0bd",
+        "archived": false,
+        "created_at": "2026-11-04T12:49:46.284297+00:00",
+        "updated_at": "2026-11-04T12:49:46.284297+00:00"
+      }
+    ],
+    "transactions": [],
+    "audit_log": []
+  }
+}

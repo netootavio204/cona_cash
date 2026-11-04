@@ -14,6 +14,7 @@ import {
   ArrowUpRight,
   Pencil,
   History,
+  Target,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import {
@@ -48,6 +49,11 @@ import { Sidebar } from '../../components/ui/Sidebar';
 import { Snackbar, type SnackbarMensagem } from '../../components/ui/Snackbar';
 import { ConfigPage, type SecaoConfig } from '../config/ConfigPage';
 import { ReportsPage } from '../reports/ReportsPage';
+import { GoalsPage } from '../goals/GoalsPage';
+import { GoalProgressBar } from '../../components/ui/GoalProgressBar';
+import { calculateGoalProgress } from '../../utils/goalProgress';
+import { fetchGoals, ensureMyGoals } from '../../api/supabase';
+import type { Goal, GoalProgress } from '../../types/database';
 import { MiniBarChart } from '../../components/ui/MiniBarChart';
 import { DonutChart } from '../../components/ui/DonutChart';
 import type { FinancialReportData } from '../../types/database';
@@ -100,6 +106,8 @@ export const HomePage: React.FC = () => {
   const [carregandoDados, setCarregandoDados] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [relatorio7Dias, setRelatorio7Dias] = useState<FinancialReportData | null>(null);
+  const [metas, setMetas] = useState<Goal[]>([]);
+  const [todasTransacoes, setTodasTransacoes] = useState<Transaction[]>([]);
 
   // Modais de Lançamento / Lote / Histórico
   const [modalLancamentoAberto, setModalLancamentoAberto] = useState(false);
@@ -166,7 +174,8 @@ export const HomePage: React.FC = () => {
       const start7 = seteDiasAtras.toISOString().slice(0, 10);
       const end7 = agora.toISOString().slice(0, 10);
 
-      const [balances, accs, srcs, pms, cats, recentTx, todayTx, rep7] =
+      await ensureMyGoals().catch(() => {});
+      const [balances, accs, srcs, pms, cats, recentTx, todayTx, rep7, userGoals, allTx] =
         await Promise.all([
           fetchAccountBalances(),
           fetchAccounts(),
@@ -181,7 +190,12 @@ export const HomePage: React.FC = () => {
             endDateISO: endISO,
           }),
           fetchFinancialReport({ startDateISO: start7, endDateISO: end7 }).catch(() => null),
+          fetchGoals().catch(() => []),
+          fetchTransactions({ page: 1, pageSize: 1000 }).catch(() => ({ data: [] })),
         ]);
+
+      setMetas(userGoals);
+      setTodasTransacoes(allTx.data);
 
       if (rep7) {
         setRelatorio7Dias(rep7);
@@ -584,6 +598,42 @@ export const HomePage: React.FC = () => {
                   </div>
                 )}
 
+                {/* BLOCO DA FASE 5: METAS EM DESTAQUE NO DASHBOARD */}
+                {metas.filter((m) => m.active).length > 0 && (
+                  <Card padding="md">
+                    <div className="flex items-center justify-between gap-2 mb-2 min-w-0">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Target className="w-4 h-4 text-[#FF7A1A] shrink-0" />
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-[#9A9AA6] truncate">
+                          Metas em Andamento
+                        </h3>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setAba('metas')}
+                        className="text-xs text-[#FF7A1A] font-semibold hover:underline"
+                      >
+                        Ver todas
+                      </button>
+                    </div>
+                    <div className="flex flex-col gap-3 min-w-0">
+                      {metas
+                        .filter((m) => m.active)
+                        .slice(0, 2)
+                        .map((meta) => {
+                          const prog = calculateGoalProgress(
+                            meta,
+                            todasTransacoes,
+                            fontes,
+                            new Date(),
+                            perfil?.week_starts_on ?? 1
+                          );
+                          return <GoalProgressBar key={meta.id} progress={prog} compact />;
+                        })}
+                    </div>
+                  </Card>
+                )}
+
                 {/* Cards de Saldo por Conta */}
                 <div className="space-y-2.5 min-w-0">
                   <div className="flex items-center justify-between gap-2 px-1 min-w-0">
@@ -821,16 +871,12 @@ export const HomePage: React.FC = () => {
           )}
 
           {aba === 'metas' && (
-            <Card bordaAnimada padding="lg">
-              <div className="text-center py-6 space-y-2 min-w-0">
-                <h2 className="text-base sm:text-lg font-bold text-white truncate">
-                  Metas e Conquistas (Fase 5)
-                </h2>
-                <p className="text-xs sm:text-sm text-[#9A9AA6] max-w-md mx-auto">
-                  Esta área será liberada na próxima fase do cronograma.
-                </p>
-              </div>
-            </Card>
+            <GoalsPage
+              transactions={todasTransacoes}
+              fontes={fontes}
+              onShowToast={mostrarAviso}
+              onRefreshData={carregarDadosGerais}
+            />
           )}
 
           {aba === 'config' && (

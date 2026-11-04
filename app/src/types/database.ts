@@ -232,3 +232,48 @@ export interface FinancialReportData {
 
 export const TAGS_RAPIDAS_ENTRADA = DEFAULT_QUICK_TAGS;
 export const TAGS_RAPIDAS_SAIDA = DEFAULT_QUICK_TAGS;
+
+
+// ==============================================================================
+// METAS E CONQUISTAS (Fase 5)
+// ==============================================================================
+export type GoalKind = 'earning' | 'expense_limit' | 'saving';
+export type GoalPeriod = 'daily' | 'weekly' | 'monthly';
+
+export interface Goal {
+  id: string;
+  user_id: string;
+  title: string;
+  kind: GoalKind;
+  period: GoalPeriod;
+  target_cents: number;
+  income_source_id?: string | null;
+  active: boolean;
+  celebrated_periods: string[];
+  archived: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GoalAchievement {
+  id: string;
+  user_id: string;
+  goal_id: string;
+  period_key: string;
+  medal_tier: 'bronze' | 'silver' | 'gold';
+  achieved_cents: number;
+  target_cents: number;
+  achieved_at: string;
+}
+
+export interface GoalProgress {
+  goal: Goal;
+  current_cents: number;
+  target_cents: number;
+  percentage: number;
+  remaining_cents: number;
+  is_achieved: boolean;
+  is_over_limit: boolean;
+  period_key: string;
+  status: 'ok' | 'warning' | 'danger' | 'achieved';
+}

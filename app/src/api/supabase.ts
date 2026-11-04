@@ -754,3 +754,108 @@ export async function fetchFinancialReport(params: {
   if (error) throw error;
   return data as import('../types/database').FinancialReportData;
 }
+
+
+// ============================================================================
+// METAS E CONQUISTAS (Fase 5)
+// ============================================================================
+
+export async function fetchGoals(): Promise<import('../types/database').Goal[]> {
+  const { data, error } = await supabase
+    .from('goals')
+    .select('*')
+    .eq('archived', false)
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+  return (data || []) as import('../types/database').Goal[];
+}
+
+export async function createGoal(
+  goal: Omit<import('../types/database').Goal, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'celebrated_periods' | 'archived'>
+): Promise<import('../types/database').Goal> {
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData?.user) throw new Error('Não autenticado');
+
+  const { data, error } = await supabase
+    .from('goals')
+    .insert({
+      user_id: userData.user.id,
+      title: goal.title.trim(),
+      kind: goal.kind,
+      period: goal.period,
+      target_cents: goal.target_cents,
+      income_source_id: goal.income_source_id || null,
+      active: goal.active ?? true,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as import('../types/database').Goal;
+}
+
+export async function updateGoal(
+  id: string,
+  updates: Partial<import('../types/database').Goal>
+): Promise<import('../types/database').Goal> {
+  const { data, error } = await supabase
+    .from('goals')
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as import('../types/database').Goal;
+}
+
+export async function deleteGoal(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('goals')
+    .update({ archived: true, updated_at: new Date().toISOString() })
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+export async function fetchGoalAchievements(): Promise<import('../types/database').GoalAchievement[]> {
+  const { data, error } = await supabase
+    .from('goal_achievements')
+    .select('*')
+    .order('achieved_at', { ascending: false })
+    .limit(50);
+
+  if (error) throw error;
+  return (data || []) as import('../types/database').GoalAchievement[];
+}
+
+export async function recordGoalCelebration(params: {
+  goalId: string;
+  periodKey: string;
+  achievedCents: number;
+  targetCents: number;
+}): Promise<boolean> {
+  const { data, error } = await supabase.rpc('record_goal_celebration', {
+    p_goal_id: params.goalId,
+    p_period_key: params.periodKey,
+    p_achieved_cents: params.achievedCents,
+    p_target_cents: params.targetCents,
+  });
+
+  if (error) {
+    console.error('Erro ao registrar celebração:', error);
+    return false;
+  }
+  return Boolean(data);
+}
+
+export async function ensureMyGoals(): Promise<void> {
+  const { error } = await supabase.rpc('ensure_my_goals');
+  if (error) {
+    console.warn('Erro ao verificar seed de metas:', error);
+  }
+}
