@@ -1,13 +1,14 @@
 # 00 — SKILL (regras do agente) — LEIA ANTES DE QUALQUER COISA
 
-Você é o agente de IA que vai construir o app **Caixa Simples** (nome provisório) para o Octavio.
+Você é o agente de IA que vai construir o app **Cona Cash** (antes chamado Caixa Simples) para o Octavio.
 Octavio **não é programador**: fale em português (pt-BR), de forma simples, direta e curta.
 
 ## Ordem de leitura (sempre que abrir esta pasta)
 1. `00-SKILL.md` (este arquivo)
 2. `DIARIO.md` — descubra em que fase/passo parou. **Nunca recomece do zero.**
-3. `PRD.md` — a fonte da verdade do produto
-4. O arquivo da fase atual (`FASE-1.md` … `FASE-6.md`)
+3. `ATUALIZACAO-v1.1.md` — o que mudou na versão 1.1 e a **nova ordem de execução**
+4. `PRD.md` (versão 1.1) — a fonte da verdade do produto
+5. O arquivo da fase atual (`FASE-1.md`, `FASE-2.md`, `FASE-3.md`, `FASE-3B.md`, `FASE-3C.md`, `FASE-4.md`, `FASE-5.md`, `FASE-6.md`)
 
 ## Regras de ouro
 1. **Entreviste antes de construir.** No início de CADA fase, faça as perguntas da seção "Entrevista" do arquivo da fase (máx. 5 por vez, com opções de resposta quando possível). Não assuma nada que o PRD não diga.
@@ -38,3 +39,11 @@ Octavio **não é programador**: fale em português (pt-BR), de forma simples, d
   /supabase       <- migrations .sql versionadas
   /APK            <- (futuro) Capacitor/Android
 ```
+
+## Regras da ATUALIZAÇÃO v1.1 (valem a partir da Fase 3B)
+11. **Não apague nem refaça o que já funciona** (Fases 1–3). Mudanças são **aditivas**: migrations com `create table if not exists` / `add column if not exists`, nunca `drop`, nunca renomear coluna existente. Antes de cada migration, entregue ao Octavio o comando de **backup/exportação** e só aplique depois do OK.
+12. **Layout de celular é INTOCÁVEL.** Antes de mexer em qualquer tela, gere capturas "antes" (320, 360, 412, 768, 1023 px). Alterações de desktop usam **apenas** classes `lg:` / `xl:` / `2xl:`. Ao final, compare "antes × depois": abaixo de 1024 px a diferença tem que ser **zero**.
+13. **O app não é só de corridas.** Não escreva textos, tags ou nomes fixos ligados a 99/Uber no código. Tudo que for "de onde veio o dinheiro" usa **Fonte de renda** (editável).
+14. **Ganho ≠ Aporte.** Só fontes com `counts_as_earning = true` entram em relatórios de ganho e metas de ganho. Aporte entra no saldo, não no ganho.
+15. **Ordem das fases novas**: 3 (aprovação) → **3B** → **3C** → 4 → 5 → 6. Cada uma com entrevista e aprovação do Octavio.
+16. Ao concluir cada fase, **registre no DIARIO.md** a versão (`v0.3.1`, `v0.3.2`, `v0.4.0`…), e confirme que o deploy da Vercel está no ar com a mesma versão.

@@ -19,6 +19,9 @@ import {
   VolumeX,
   Calendar,
   Users,
+  Briefcase,
+  Sparkles,
+  X,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import {
@@ -35,6 +38,11 @@ import {
   createCategory,
   updateCategory,
   deleteCategory,
+  addSuggested3DCategories,
+  fetchIncomeSources,
+  createIncomeSource,
+  updateIncomeSource,
+  deleteIncomeSource,
   updateMyPreferences,
   updateMyPassword,
   fetchAllProfilesAdmin,
@@ -42,11 +50,13 @@ import {
   updateSignupOpenAdmin,
 } from '../../api/supabase';
 import {
+  DEFAULT_QUICK_TAGS,
   PALETA_CORES,
   type Account,
   type AccountType,
   type Category,
   type CategoryIconName,
+  type IncomeSource,
   type PaymentMethod,
   type Profile,
   type UserStatus,
@@ -68,7 +78,13 @@ import {
 } from '../../components/ui/CategoryIcon';
 import { APP_NAME, APP_VERSION } from '../../config/version';
 
-type SecaoConfig = 'contas' | 'formas' | 'categorias' | 'preferencias' | 'admin';
+type SecaoConfig =
+  | 'contas'
+  | 'fontes'
+  | 'formas'
+  | 'categorias'
+  | 'preferencias'
+  | 'admin';
 
 export interface ConfigPageProps {
   onShowToast: (texto: string, tipo?: 'sucesso' | 'erro' | 'info') => void;
@@ -86,6 +102,7 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
   const [carregandoDados, setCarregandoDados] = useState(true);
 
   const [contas, setContas] = useState<Account[]>([]);
+  const [fontes, setFontes] = useState<IncomeSource[]>([]);
   const [formas, setFormas] = useState<PaymentMethod[]>([]);
   const [categorias, setCategorias] = useState<Category[]>([]);
   const [mostrarArquivados, setMostrarArquivados] = useState(false);
@@ -112,12 +129,14 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
     setCarregandoDados(true);
     try {
       await ensureMyDefaults();
-      const [accs, pms, cats] = await Promise.all([
+      const [accs, srcs, pms, cats] = await Promise.all([
         fetchAccounts(),
+        fetchIncomeSources(),
         fetchPaymentMethods(),
         fetchCategories(),
       ]);
       setContas(accs);
+      setFontes(srcs);
       setFormas(pms);
       setCategorias(cats);
     } catch (err: any) {
@@ -402,20 +421,182 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
       await deleteCategory(cat.id);
       onShowToast(`"${cat.name}" excluída.`, 'sucesso');
       await carregarTudo();
+      onAccountsChanged?.();
     } catch {
       onShowToast('Não foi possível excluir. Tente arquivar.', 'erro');
     }
   };
 
+  const [adicionandoSugestoes3D, setAdicionandoSugestoes3D] = useState(false);
+
+  const adicionarSugestoes3D = async () => {
+    if (!usuario) return;
+    setAdicionandoSugestoes3D(true);
+    try {
+      const qtd = await addSuggested3DCategories(usuario.id, categorias);
+      if (qtd === 0) {
+        onShowToast(
+          'Todas as sugestões de categorias 3D já estão cadastradas!',
+          'info'
+        );
+      } else {
+        onShowToast(
+          `${qtd} categoria(s) para peças 3D adicionada(s) com sucesso!`,
+          'sucesso'
+        );
+        await carregarTudo();
+        onAccountsChanged?.();
+      }
+    } catch (err: any) {
+      onShowToast(err?.message || 'Erro ao adicionar sugestões 3D.', 'erro');
+    } finally {
+      setAdicionandoSugestoes3D(false);
+    }
+  };
+
   // ============================================================================
-  // PREFERÊNCIAS DO USUÁRIO
+  // MODAL DE FONTE DE RENDA / APORTE (income_sources — Fase 3B)
+  // ============================================================================
+  const [modalFonteAberto, setModalFonteAberto] = useState(false);
+  const [fonteEditando, setFonteEditando] = useState<IncomeSource | null>(null);
+  const [fonteNome, setFonteNome] = useState('');
+  const [fonteIcone, setFonteIcone] = useState<CategoryIconName>('shopping-bag');
+  const [fonteCor, setFonteCor] = useState('#FF7A1A');
+  const [fonteContaComoGanho, setFonteContaComoGanho] = useState(true);
+  const [fonteFormaId, setFonteFormaId] = useState<string>('');
+  const [fonteContaId, setFonteContaId] = useState<string>('');
+  const [salvandoFonte, setSalvandoFonte] = useState(false);
+
+  const formasAtivas = formas.filter((f) => !f.archived);
+
+  const abrirNovaFonte = () => {
+    setFonteEditando(null);
+    setFonteNome('');
+    setFonteIcone('shopping-bag');
+    setFonteCor('#FF7A1A');
+    setFonteContaComoGanho(true);
+    const pmInicial = formasAtivas[0];
+    setFonteFormaId(pmInicial?.id || '');
+    setFonteContaId(
+      pmInicial?.default_account_id || contasAtivas[0]?.id || ''
+    );
+    setModalFonteAberto(true);
+  };
+
+  const abrirEditarFonte = (src: IncomeSource) => {
+    setFonteEditando(src);
+    setFonteNome(src.name);
+    setFonteIcone(src.icon || 'tag');
+    setFonteCor(src.color || '#FF7A1A');
+    setFonteContaComoGanho(src.counts_as_earning);
+    setFonteFormaId(src.default_payment_method_id || '');
+    setFonteContaId(src.default_account_id || '');
+    setModalFonteAberto(true);
+  };
+
+  const salvarFonte = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!usuario) return;
+    if (!fonteNome.trim()) {
+      onShowToast('Digite o nome da fonte de renda.', 'erro');
+      return;
+    }
+
+    setSalvandoFonte(true);
+    try {
+      if (fonteEditando) {
+        await updateIncomeSource(fonteEditando.id, {
+          name: fonteNome,
+          icon: fonteIcone,
+          color: fonteCor,
+          counts_as_earning: fonteContaComoGanho,
+          default_payment_method_id: fonteFormaId || null,
+          default_account_id: fonteContaId || null,
+        });
+        onShowToast('Fonte de renda atualizada!', 'sucesso');
+      } else {
+        await createIncomeSource({
+          user_id: usuario.id,
+          name: fonteNome,
+          icon: fonteIcone,
+          color: fonteCor,
+          counts_as_earning: fonteContaComoGanho,
+          default_payment_method_id: fonteFormaId || null,
+          default_account_id: fonteContaId || null,
+        });
+        onShowToast('Nova fonte de renda criada!', 'sucesso');
+      }
+      setModalFonteAberto(false);
+      await carregarTudo();
+      onAccountsChanged?.();
+    } catch (err: any) {
+      onShowToast(err?.message || 'Erro ao salvar fonte de renda.', 'erro');
+    } finally {
+      setSalvandoFonte(false);
+    }
+  };
+
+  const alternarArquivoFonte = async (src: IncomeSource) => {
+    try {
+      await updateIncomeSource(src.id, { archived: !src.archived });
+      onShowToast(
+        src.archived
+          ? `Fonte "${src.name}" restaurada.`
+          : `Fonte "${src.name}" arquivada.`,
+        'info'
+      );
+      await carregarTudo();
+      onAccountsChanged?.();
+    } catch (err: any) {
+      onShowToast(err?.message || 'Erro ao arquivar fonte.', 'erro');
+    }
+  };
+
+  const excluirFonteSemLancamentos = async (src: IncomeSource) => {
+    try {
+      await deleteIncomeSource(src.id);
+      onShowToast(`Fonte "${src.name}" excluída.`, 'sucesso');
+      await carregarTudo();
+      onAccountsChanged?.();
+    } catch {
+      onShowToast(
+        'Não é possível excluir uma fonte que já possui lançamentos vinculados (mantenha-a arquivada).',
+        'erro'
+      );
+    }
+  };
+
+  // ============================================================================
+  // PREFERÊNCIAS DO USUÁRIO + TAGS RÁPIDAS EDITÁVEIS
   // ============================================================================
   const [prefNome, setPrefNome] = useState(perfil?.name || '');
   const [prefSom, setPrefSom] = useState(perfil?.sound_enabled ?? true);
   const [prefDiaSemana, setPrefDiaSemana] = useState<0 | 1>(
     perfil?.week_starts_on ?? 1
   );
+  const [prefTags, setPrefTags] = useState<string[]>(
+    perfil?.quick_tags && perfil.quick_tags.length > 0
+      ? perfil.quick_tags
+      : DEFAULT_QUICK_TAGS
+  );
+  const [novaTagTexto, setNovaTagTexto] = useState('');
   const [salvandoPref, setSalvandoPref] = useState(false);
+
+  const adicionarNovaTagRapida = () => {
+    const limpa = novaTagTexto.trim().replace(/\s+/g, '');
+    if (!limpa) return;
+    const formatada = limpa.startsWith('#') ? limpa : `#${limpa}`;
+    if (prefTags.some((t) => t.toLowerCase() === formatada.toLowerCase())) {
+      setNovaTagTexto('');
+      return;
+    }
+    setPrefTags((atuais) => [...atuais, formatada]);
+    setNovaTagTexto('');
+  };
+
+  const removerTagRapida = (tag: string) => {
+    setPrefTags((atuais) => atuais.filter((t) => t !== tag));
+  };
 
   // Alteração de senha direto nas Preferências
   const [novaSenha, setNovaSenha] = useState('');
@@ -450,6 +631,11 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
       setPrefNome(perfil.name);
       setPrefSom(perfil.sound_enabled);
       setPrefDiaSemana(perfil.week_starts_on);
+      setPrefTags(
+        perfil.quick_tags && perfil.quick_tags.length > 0
+          ? perfil.quick_tags
+          : DEFAULT_QUICK_TAGS
+      );
     }
   }, [perfil]);
 
@@ -462,9 +648,10 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
         name: prefNome.trim() || 'Usuário',
         sound_enabled: prefSom,
         week_starts_on: prefDiaSemana,
+        quick_tags: prefTags.length > 0 ? prefTags : DEFAULT_QUICK_TAGS,
       });
       await recarregarPerfilEConfig();
-      onShowToast('Preferências salvas com sucesso!', 'sucesso');
+      onShowToast('Preferências e tags salvas com sucesso!', 'sucesso');
     } catch (err: any) {
       onShowToast(err?.message || 'Erro ao salvar preferências.', 'erro');
     } finally {
@@ -540,6 +727,9 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
   const contasVisiveis = contas.filter((c) =>
     mostrarArquivados ? true : !c.archived
   );
+  const fontesVisiveis = fontes.filter((src) =>
+    mostrarArquivados ? true : !src.archived
+  );
   const formasVisiveis = formas.filter((f) =>
     mostrarArquivados ? true : !f.archived
   );
@@ -553,6 +743,12 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
     return encontrada ? encontrada.name : 'Conta não encontrada';
   };
 
+  const obterNomeForma = (paymentMethodId: string | null) => {
+    if (!paymentMethodId) return 'Escolher na hora';
+    const encontrada = formas.find((f) => f.id === paymentMethodId);
+    return encontrada ? encontrada.name : 'Forma não encontrada';
+  };
+
   // Simulação de taxa ao vivo no modal de Forma de Pagamento
   const taxaPreviewNum = parseFeePercent(formaTaxaTexto) ?? 0;
   const liquidoPreviewCents = Math.round(10000 * (1 - taxaPreviewNum / 100));
@@ -560,7 +756,7 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
   return (
     <div className="flex flex-col gap-4 min-w-0">
       {/* Abas superiores da área de Configurações */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 bg-[#141418] p-1.5 rounded-2xl border border-[#262630] min-w-0">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 bg-[#141418] p-1.5 rounded-2xl border border-[#262630] min-w-0">
         <button
           type="button"
           onClick={() => setSecao('contas')}
@@ -573,6 +769,20 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
         >
           <Landmark className="w-4 h-4 shrink-0" />
           <span className="truncate">Contas</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSecao('fontes')}
+          className={[
+            'min-h-[42px] px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all min-w-0 overflow-hidden',
+            secao === 'fontes'
+              ? 'bg-[#FF7A1A] text-[#0B0B0D] shadow'
+              : 'text-[#9A9AA6] hover:text-white',
+          ].join(' ')}
+        >
+          <Briefcase className="w-4 h-4 shrink-0" />
+          <span className="truncate">Fontes</span>
         </button>
 
         <button
@@ -622,7 +832,7 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
             type="button"
             onClick={() => setSecao('admin')}
             className={[
-              'col-span-2 sm:col-span-1 min-h-[42px] px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all min-w-0 overflow-hidden',
+              'min-h-[42px] px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all min-w-0 overflow-hidden',
               secao === 'admin'
                 ? 'bg-[#FF7A1A] text-[#0B0B0D] shadow'
                 : 'text-[#FFC940] hover:bg-white/5',
@@ -634,9 +844,12 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
         )}
       </div>
 
-      {/* Filtro de Arquivados para Contas / Formas / Categorias */}
-      {(secao === 'contas' || secao === 'formas' || secao === 'categorias') && (
-        <div className="flex items-center justify-between gap-2 px-1 min-w-0">
+      {/* Filtro de Arquivados para Contas / Fontes / Formas / Categorias */}
+      {(secao === 'contas' ||
+        secao === 'fontes' ||
+        secao === 'formas' ||
+        secao === 'categorias') && (
+        <div className="flex flex-wrap items-center justify-between gap-2 px-1 min-w-0">
           <label className="inline-flex items-center gap-2 text-xs text-[#9A9AA6] cursor-pointer select-none min-w-0">
             <input
               type="checkbox"
@@ -647,33 +860,54 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
             <span className="truncate">Mostrar itens arquivados</span>
           </label>
 
-          {secao === 'contas' && (
-            <Botao
-              variante="primario"
-              tamanho="sm"
-              icone={<Plus className="w-4 h-4" />}
-              texto="Nova Conta"
-              onClick={abrirNovaConta}
-            />
-          )}
-          {secao === 'formas' && (
-            <Botao
-              variante="primario"
-              tamanho="sm"
-              icone={<Plus className="w-4 h-4" />}
-              texto="Nova Forma"
-              onClick={abrirNovaForma}
-            />
-          )}
-          {secao === 'categorias' && (
-            <Botao
-              variante="primario"
-              tamanho="sm"
-              icone={<Plus className="w-4 h-4" />}
-              texto="Nova Categoria"
-              onClick={abrirNovaCategoria}
-            />
-          )}
+          <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+            {secao === 'contas' && (
+              <Botao
+                variante="primario"
+                tamanho="sm"
+                icone={<Plus className="w-4 h-4" />}
+                texto="Nova Conta"
+                onClick={abrirNovaConta}
+              />
+            )}
+            {secao === 'fontes' && (
+              <Botao
+                variante="primario"
+                tamanho="sm"
+                icone={<Plus className="w-4 h-4" />}
+                texto="Nova Fonte"
+                onClick={abrirNovaFonte}
+              />
+            )}
+            {secao === 'formas' && (
+              <Botao
+                variante="primario"
+                tamanho="sm"
+                icone={<Plus className="w-4 h-4" />}
+                texto="Nova Forma"
+                onClick={abrirNovaForma}
+              />
+            )}
+            {secao === 'categorias' && (
+              <>
+                <Botao
+                  variante="secundario"
+                  tamanho="sm"
+                  carregando={adicionandoSugestoes3D}
+                  icone={<Sparkles className="w-4 h-4 text-[#FFC940]" />}
+                  texto="+ Sugestões 3D"
+                  onClick={adicionarSugestoes3D}
+                />
+                <Botao
+                  variante="primario"
+                  tamanho="sm"
+                  icone={<Plus className="w-4 h-4" />}
+                  texto="Nova Categoria"
+                  onClick={abrirNovaCategoria}
+                />
+              </>
+            )}
+          </div>
         </div>
       )}
 
@@ -766,6 +1000,123 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
                         icone={<Trash2 className="w-3.5 h-3.5" />}
                         texto="Excluir"
                         onClick={() => excluirContaSemLancamentos(c)}
+                      />
+                    )}
+                  </div>
+                </div>
+              </Card>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* ====================================================================
+          SEÇÃO 1B: FONTES DE RENDA E APORTES (Fase 3B)
+      ==================================================================== */}
+      {secao === 'fontes' && (
+        <div className="flex flex-col gap-2.5 min-w-0">
+          <p className="text-xs text-[#9A9AA6] px-1">
+            Gerencie suas fontes de renda (corridas, vendas 3D, etc.) e aportes. Quando uma fonte está marcada como{' '}
+            <strong className="text-[#06B6D4]">Aporte</strong>, o dinheiro entra no saldo da conta mas não infla os totais de ganho.
+          </p>
+
+          {carregandoDados ? (
+            <Card>
+              <p className="text-xs text-[#9A9AA6]">
+                Carregando fontes de renda...
+              </p>
+            </Card>
+          ) : fontesVisiveis.length === 0 ? (
+            <Card>
+              <p className="text-xs text-[#9A9AA6]">
+                Nenhuma fonte de renda encontrada.
+              </p>
+            </Card>
+          ) : (
+            fontesVisiveis.map((src) => (
+              <Card
+                key={src.id}
+                padding="md"
+                className={src.archived ? 'opacity-60' : ''}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      style={{
+                        backgroundColor: `${src.color}20`,
+                        borderColor: `${src.color}60`,
+                        color: src.color,
+                      }}
+                      className="w-11 h-11 rounded-xl border flex items-center justify-center shrink-0"
+                    >
+                      <CategoryIcon name={src.icon} className="w-5 h-5" />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                        <h3
+                          className="text-sm sm:text-base font-bold text-white truncate"
+                          title={src.name}
+                        >
+                          {src.name}
+                        </h3>
+                        <span
+                          className={[
+                            'text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0',
+                            src.counts_as_earning
+                              ? 'bg-[#2EE59D]/15 text-[#2EE59D]'
+                              : 'bg-[#06B6D4]/20 text-[#06B6D4] border border-[#06B6D4]/40',
+                          ].join(' ')}
+                        >
+                          {src.counts_as_earning ? 'Conta como ganho' : 'Aporte'}
+                        </span>
+                        {src.archived && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-[#9A9AA6] font-semibold shrink-0">
+                            Arquivada
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-[#9A9AA6] truncate mt-0.5">
+                        Sugere:{' '}
+                        <strong className="text-[#F5F5F7]">
+                          {obterNomeForma(src.default_payment_method_id)}
+                        </strong>{' '}
+                        →{' '}
+                        <strong className="text-[#F5F5F7]">
+                          {obterNomeConta(src.default_account_id)}
+                        </strong>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                    <Botao
+                      variante="secundario"
+                      tamanho="sm"
+                      icone={<Pencil className="w-3.5 h-3.5" />}
+                      texto="Editar"
+                      onClick={() => abrirEditarFonte(src)}
+                    />
+                    <Botao
+                      variante="fantasma"
+                      tamanho="sm"
+                      icone={
+                        src.archived ? (
+                          <RotateCcw className="w-3.5 h-3.5 text-[#2EE59D]" />
+                        ) : (
+                          <Archive className="w-3.5 h-3.5 text-[#FFC940]" />
+                        )
+                      }
+                      texto={src.archived ? 'Restaurar' : 'Arquivar'}
+                      onClick={() => alternarArquivoFonte(src)}
+                    />
+                    {src.archived && (
+                      <Botao
+                        variante="perigo"
+                        tamanho="sm"
+                        icone={<Trash2 className="w-3.5 h-3.5" />}
+                        texto="Excluir"
+                        onClick={() => excluirFonteSemLancamentos(src)}
                       />
                     )}
                   </div>
@@ -1053,6 +1404,70 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
                   >
                     Domingo
                   </button>
+                </div>
+              </div>
+
+              {/* Tags rápidas editáveis (Fase 3B item 8) */}
+              <div className="p-3.5 rounded-xl bg-[#0B0B0D] border border-[#262630] space-y-3 min-w-0">
+                <div className="flex items-center justify-between gap-2 min-w-0">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-white truncate">
+                      Tags Rápidas (#)
+                    </p>
+                    <p className="text-xs text-[#9A9AA6] truncate">
+                      Aparecem como botões rápidos nas observações dos lançamentos
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPrefTags(DEFAULT_QUICK_TAGS)}
+                    className="text-[11px] font-semibold text-[#FF7A1A] hover:underline shrink-0"
+                  >
+                    Restaurar padrão
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 min-w-0">
+                  {prefTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#141418] border border-[#262630] text-xs text-white"
+                    >
+                      <span className="truncate max-w-[140px]">{tag}</span>
+                      <button
+                        type="button"
+                        onClick={() => removerTagRapida(tag)}
+                        aria-label={`Remover tag ${tag}`}
+                        className="text-[#9A9AA6] hover:text-[#FF3B30]"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+
+                <div className="flex gap-2 min-w-0">
+                  <input
+                    type="text"
+                    value={novaTagTexto}
+                    onChange={(e) => setNovaTagTexto(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        adicionarNovaTagRapida();
+                      }
+                    }}
+                    placeholder="Nova tag (ex.: #Chaveiro3D)"
+                    className="flex-1 min-w-0 min-h-[42px] px-3 bg-[#141418] border border-[#262630] rounded-xl text-xs sm:text-sm text-white placeholder-[#9A9AA6]/60 focus:outline-none focus:border-[#FF7A1A]"
+                  />
+                  <Botao
+                    type="button"
+                    variante="secundario"
+                    tamanho="sm"
+                    icone={<Plus className="w-4 h-4" />}
+                    texto="Adicionar"
+                    onClick={adicionarNovaTagRapida}
+                  />
                 </div>
               </div>
 
@@ -1374,7 +1789,7 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
             rotulo="Nome da forma de pagamento"
             value={formaNome}
             onChange={(e) => setFormaNome(e.target.value)}
-            placeholder="Ex.: Maquininha Débito, Pix, Uber..."
+            placeholder="Ex.: Maquininha Débito, Pix, Online (app)..."
             required
           />
 
@@ -1522,6 +1937,174 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
               larguraTotal
               carregando={salvandoCat}
               texto="Salvar Categoria"
+            />
+          </div>
+        </form>
+      </Modal>
+
+      {/* ====================================================================
+          MODAL: CRIAR / EDITAR FONTE DE RENDA OU APORTE (Fase 3B)
+      ==================================================================== */}
+      <Modal
+        aberto={modalFonteAberto}
+        aoFechar={() => setModalFonteAberto(false)}
+        titulo={
+          fonteEditando ? 'Editar Fonte de Renda' : 'Nova Fonte de Renda / Aporte'
+        }
+      >
+        <form onSubmit={salvarFonte} className="flex flex-col gap-4 min-w-0">
+          <Campo
+            rotulo="Nome da fonte"
+            value={fonteNome}
+            onChange={(e) => setFonteNome(e.target.value)}
+            placeholder="Ex.: Venda 3D — Shopee, Corridas (99), Aporte..."
+            required
+          />
+
+          {/* Chave Conta como Ganho vs Aporte */}
+          <div className="p-3 rounded-xl bg-[#0B0B0D] border border-[#262630] space-y-2 min-w-0">
+            <span className="text-xs font-bold text-white block">
+              Como esta entrada deve ser contabilizada?
+            </span>
+            <div className="grid grid-cols-2 gap-2 min-w-0">
+              <button
+                type="button"
+                onClick={() => setFonteContaComoGanho(true)}
+                className={[
+                  'min-h-[44px] px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all truncate',
+                  fonteContaComoGanho
+                    ? 'bg-[#2EE59D]/20 border-[#2EE59D] text-[#2EE59D]'
+                    : 'bg-[#141418] border-[#262630] text-[#9A9AA6]',
+                ].join(' ')}
+              >
+                Conta como Ganho
+              </button>
+              <button
+                type="button"
+                onClick={() => setFonteContaComoGanho(false)}
+                className={[
+                  'min-h-[44px] px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all truncate',
+                  !fonteContaComoGanho
+                    ? 'bg-[#06B6D4]/20 border-[#06B6D4] text-[#06B6D4]'
+                    : 'bg-[#141418] border-[#262630] text-[#9A9AA6]',
+                ].join(' ')}
+              >
+                É um Aporte
+              </button>
+            </div>
+            <p className="text-[11px] text-[#9A9AA6]">
+              {fonteContaComoGanho
+                ? 'Soma no saldo da conta e também entra nos seus relatórios e metas de ganho.'
+                : 'Aporte: soma no saldo da conta, mas NÃO entra nos totais de ganho do dia/mês.'}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-0">
+            <div className="flex flex-col gap-1.5 min-w-0">
+              <label className="text-xs font-medium text-[#F5F5F7] truncate">
+                Forma de pagamento padrão
+              </label>
+              <select
+                value={fonteFormaId}
+                onChange={(e) => {
+                  const novoPmId = e.target.value;
+                  setFonteFormaId(novoPmId);
+                  const pm = formasAtivas.find((f) => f.id === novoPmId);
+                  if (pm?.default_account_id) {
+                    setFonteContaId(pm.default_account_id);
+                  }
+                }}
+                className="w-full min-h-[44px] px-3 bg-[#0B0B0D] border border-[#262630] rounded-xl text-xs sm:text-sm text-white"
+              >
+                <option value="">Escolher na hora</option>
+                {formasAtivas.map((pm) => (
+                  <option key={pm.id} value={pm.id}>
+                    {pm.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1.5 min-w-0">
+              <label className="text-xs font-medium text-[#F5F5F7] truncate">
+                Conta de destino padrão
+              </label>
+              <select
+                value={fonteContaId}
+                onChange={(e) => setFonteContaId(e.target.value)}
+                className="w-full min-h-[44px] px-3 bg-[#0B0B0D] border border-[#262630] rounded-xl text-xs sm:text-sm text-white"
+              >
+                <option value="">Escolher na hora</option>
+                {contasAtivas.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5 min-w-0">
+            <span className="text-xs sm:text-sm font-medium text-[#F5F5F7]">
+              Ícone da fonte
+            </span>
+            <div className="grid grid-cols-4 gap-2">
+              {CATEGORY_ICONS_LIST.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setFonteIcone(item.id)}
+                  className={[
+                    'min-h-[48px] p-2 rounded-xl border flex flex-col items-center justify-center gap-1 text-[10px] transition-all min-w-0 overflow-hidden',
+                    fonteIcone === item.id
+                      ? 'bg-[#FF7A1A]/20 border-[#FF7A1A] text-white font-bold'
+                      : 'bg-[#0B0B0D] border-[#262630] text-[#9A9AA6]',
+                  ].join(' ')}
+                >
+                  <CategoryIcon name={item.id} className="w-4 h-4 shrink-0" />
+                  <span className="truncate w-full text-center">{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5 min-w-0">
+            <span className="text-xs sm:text-sm font-medium text-[#F5F5F7]">
+              Cor da etiqueta
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {PALETA_CORES.map((c) => (
+                <button
+                  key={c.valor}
+                  type="button"
+                  onClick={() => setFonteCor(c.valor)}
+                  title={c.nome}
+                  style={{ backgroundColor: c.valor }}
+                  className={[
+                    'w-9 h-9 rounded-xl transition-transform',
+                    fonteCor === c.valor
+                      ? 'ring-2 ring-white scale-110'
+                      : 'opacity-70 hover:opacity-100',
+                  ].join(' ')}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <Botao
+              type="button"
+              variante="secundario"
+              larguraTotal
+              texto="Cancelar"
+              onClick={() => setModalFonteAberto(false)}
+            />
+            <Botao
+              type="submit"
+              variante="primario"
+              larguraTotal
+              carregando={salvandoFonte}
+              texto="Salvar Fonte"
             />
           </div>
         </form>

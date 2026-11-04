@@ -1,21 +1,23 @@
-# DIÁRIO DE CONSTRUÇÃO — Caixa Simples
+# DIÁRIO DE CONSTRUÇÃO — Cona Cash (antes Caixa Simples)
 
 > O agente DEVE atualizar este arquivo. Ao retomar, leia primeiro "ESTADO ATUAL".
 
 ## ESTADO ATUAL
-- Fase atual: **FASE 3 concluída (Aguardando Retorno do Octavio para Iniciar Fase 4)**
-- Último passo concluído: Correção do bug de carregamento em loop infinito na tela de Configurações (`ConfigPage.tsx`), testes 100% aprovados e commit sincronizado no GitHub
-- Próximo passo quando voltar: Iniciar a FASE 4 (Dashboard completo, Relatórios dia/semana/mês/personalizado, gráficos e exportação em PDF)
-- Versão do app: `v0.3.0 beta`
+- Fase atual: **FASE 3B — Fontes de renda e aportes (Concluída — aguardando "APROVADO")**
+- Último passo concluído: Migration `003b_income_sources.sql` aplicada no Supabase (2x idempotente), telas de Fontes/Aportes/Sugestões 3D/Tags Rápidas/Filtro por fonte/Edição em massa implementadas, testes de regressão e RLS 100% aprovados
+- Próximo passo: Após o **"APROVADO"** do Octavio na Fase 3B, iniciar a Entrevista da **Fase 3C** (Layout de Computador/TV com menu lateral fixo `≥ 1024px`)
+- Versão do app: `v0.3.1 beta` (`schema_version = 003b_income_sources`)
 - Último commit/deploy: sincronizado no GitHub (`origin/main`)
-- Aguardando aprovação do Octavio? Sessão pausada pelo Octavio. Ao retornar, basta dizer "continuar" ou executar o comando de retomada.
+- Aguardando aprovação do Octavio? **SIM** — aguardando `"APROVADO"` da Fase 3B
 
 ## PROGRESSO DAS FASES
 | Fase | Nome | Status | Aprovada em |
 |---|---|---|---|
 | 1 | Fundação, login e visual | ✅ aprovada | 2026-11-03 |
 | 2 | Configurações e área admin | ✅ aprovada | 2026-11-03 |
-| 3 | Lançamentos (entrada, saída, transferência) | ✅ pronta (aguardando APROVADO) | — |
+| 3 | Lançamentos (entrada, saída, transferência) | ✅ aprovada | 2026-11-04 |
+| 3B | Fontes de renda e aportes (v1.1) | ⏳ aguardando aprovação | — |
+| 3C | Layout de computador/TV (v1.1) | ⬜ | — |
 | 4 | Dashboard, saldos e relatórios + PDF | ⬜ | — |
 | 5 | Metas, efeitos visuais e sons | ⬜ | — |
 | 6 | PWA, otimização, testes e preparo do APK | ⬜ | — |
@@ -42,6 +44,14 @@ Saldo Inicial configurado para o teste: **Conta 1 = R$ 100,00** | Conta 2 = R$ 0
   - **Saldo Total Geral**: `R$ 371,51` (37.151 centavos) — **BATEU 100%**
 
 ## DECISÕES TOMADAS (respostas das entrevistas)
+- `2026-11-04 — Fase 3B — Fontes de renda iniciais`: Lista padrão da v1.1 (*Corridas (99)*, *Venda 3D — Mercado Livre*, *Venda 3D — Presencial*, *Venda 3D — Bares e mercados*, *Outros ganhos*, *Aporte*).
+- `2026-11-04 — Fase 3B — Contas sugeridas`: Mercado Livre → Conta 1; Bares/Mercados → Conta 2; Presencial/Outros → Conta 3; Aporte/Dinheiro → Bolso (todas editáveis na tela).
+- `2026-11-04 — Fase 3B — Lançamentos antigos`: Manter como "Sem fonte" com opção de atribuir fonte depois.
+- `2026-11-04 — Fase 3B — Gastos vinculados à fonte`: Sim, campo opcional "Ligar a uma fonte" para cálculo de lucro líquido real por fonte (ex.: filamento abatendo de Venda 3D).
+- `2026-11-04 — Fase 3B — Tags rápidas dinâmicas`: Armazenadas e editáveis em Preferências com sugestões (#Filamento, #MercadoLivre, #99, #Gasolina, #Almoço).
+- `2026-11-04 — Atualização v1.1 — Escopo de ganhos`: o app **não é só de corridas da 99**. Quer lançar ganhos de outras fontes (venda de peças 3D com 2 impressoras: Mercado Livre, pessoalmente, em bares, em supermercados; e outras rendas) e **colocar dinheiro** (aporte) como entrada → nasce **Fonte de renda** + **Aporte** (Fase 3B).
+- `2026-11-04 — Atualização v1.1 — Layout`: no **computador/notebook/TV** quer dashboard na primeira página e **menu lateral**; ao ficar em tela pequena (responsivo) volta **exatamente como está hoje** (barra de botões embaixo). O layout de celular **não pode mudar** (Fase 3C e 4).
+- `2026-11-04 — Atualização v1.1 — Método`: não apagar comandos/fases antigas; fases novas 3B e 3C; PRD e SKILL passam a mandar ler `ATUALIZACAO-v1.1.md`.
 - `2026-11-03 — Fase 3 — Ordem dos campos na Entrada Rápida`: **Valor (R$)** primeiro e **Forma de pagamento** logo abaixo (com a conta destino já preenchida automaticamente).
 - `2026-11-03 — Fase 3 — Cálculo de taxa`: Calcula automaticamente pela % configurada na forma de pagamento e permite ajustar manualmente na hora do lançamento.
 - `2026-11-03 — Fase 3 — Lote do fim do dia`: **5 linhas vazias** de início + botão *"Adicionar linha"* + total do lote visível + salvamento atômico (tudo ou nada).
@@ -59,6 +69,8 @@ Saldo Inicial configurado para o teste: **Conta 1 = R$ 100,00** | Conta 2 = R$ 0
 - `2026-11-03 — Fase 1 — Contas e deploy`: GitHub (`https://github.com/netootavio204/cona_cash.git`), Supabase (`okcxwxmqvfpgstdhpgvm`) e Vercel já conectada ao GitHub. E-mail do Admin (`netootavio204@gmail.com`) configurado no trigger para já nascer como Admin aprovado.
 
 ## REGISTRO (mais recente em cima)
+- `2026-11-04 10:06 | Fase 3B | Backup JSON salvo, migration 003b_income_sources.sql aplicada 2x no Supabase (idempotente), CRUD de Fontes de Renda/Aportes em ConfigPage.tsx, botão "+ Sugestões 3D" em Categorias, Tags Rápidas editáveis em Preferências, seletor de Fonte na Entrada Rápida/Lote/Edição + vínculo opcional na Saída, filtro por fonte + edição em massa para "Sem fonte" em TransactionsPage.tsx e cálculo de ganhos excluindo Aportes | supabase/003b_income_sources.sql, app/src/types/database.ts, app/src/api/supabase.ts, app/src/features/config/ConfigPage.tsx, app/src/features/transactions/*, app/src/features/home/HomePage.tsx, app/src/utils/format.ts | Vitest 7/7 PASS, Supabase Integration 7/7 + Regressão Planilha PASS, Build PASS`
+- `2026-11-04 | Atualização v1.1 | Planejamento feito no chat (não pelo agente): análise do diário, PRD v1.1, SKILL v1.1, novas FASE-3B e FASE-3C, FASE-4/5/6 ajustadas e ATUALIZACAO-v1.1.md | PRD.md, 00-SKILL.md, DIARIO.md, FASE-3B.md, FASE-3C.md, FASE-4.md, FASE-5.md, FASE-6.md, ATUALIZACAO-v1.1.md | Nenhum código alterado`
 - `2026-11-03 15:16 | Fase 3 | Migration 003_transactions.sql aplicada no Supabase + criação de TransactionModals.tsx (Entrada Rápida, Saída, Transferência, Lote do Dia com 5 linhas e Histórico de Auditoria), TransactionsPage.tsx (filtros, busca, paginação 50, Lixeira com restaurar e Desfazer 6s), botão de troca de senha nas Preferências e conferência de 10 lançamentos | supabase/003_transactions.sql, app/src/features/transactions/*, app/src/features/home/HomePage.tsx, app/src/features/config/ConfigPage.tsx | Vitest 5/5 PASS, Supabase Integration 6/6 + 10 Lançamentos PASS, Build PASS`
 - `2026-11-03 13:58 | Fase 2 | Migration 002_config.sql aplicada automaticamente no Supabase + criação de ConfigPage.tsx (Contas, Formas/Taxas decimais, Categorias com ícones/cores, Preferências e Painel Admin com confirmação), CampoMoeda.tsx e CategoryIcon.tsx | supabase/002_config.sql, app/src/features/config/ConfigPage.tsx, app/src/components/ui/CampoMoeda.tsx, app/src/components/ui/CategoryIcon.tsx, app/src/features/home/HomePage.tsx | Vitest 4/4 PASS, Supabase Integration 6/6 PASS, Build PASS`
 - `2026-11-03 13:50 | Fase 2 | Entrevista da Fase 2 concluída com o Octavio; decisões registradas no diário | DIARIO.md | OK`
@@ -69,6 +81,8 @@ Saldo Inicial configurado para o teste: **Conta 1 = R$ 100,00** | Conta 2 = R$ 0
 
 ## PROBLEMAS EM ABERTO
 (descrever erro, o que já tentou, próximo passo)
+- Confirmar se o deploy da Vercel está no ar e registrar a URL abaixo (campo ainda está como "aguardando primeiro deploy").
+- Confirmar que o repositório GitHub é **privado** (este diário contém o e-mail do admin).
 
 ## DADOS DE AMBIENTE (sem senhas/chaves!)
 - Repositório GitHub: `https://github.com/netootavio204/cona_cash.git`

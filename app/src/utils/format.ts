@@ -157,3 +157,38 @@ export function getTodaySaoPauloBoundsISO(now: Date = new Date()): {
   const endISO = new Date(`${datePart}T23:59:59.999-03:00`).toISOString();
   return { startISO, endISO };
 }
+
+/**
+ * Soma os ganhos líquidos e saídas de uma lista de lançamentos,
+ * excluindo Transferências e excluindo Aportes (fontes com counts_as_earning = false).
+ */
+export function sumEarningsAndExpenses(
+  transactions: {
+    kind: 'income' | 'expense' | 'transfer';
+    net_cents: number;
+    income_source_id?: string | null;
+  }[],
+  sources: { id: string; counts_as_earning: boolean }[]
+): { entradasGanhoCents: number; aportesCents: number; saidasCents: number } {
+  const sourceMap = new Map(sources.map((s) => [s.id, s]));
+  let entradasGanhoCents = 0;
+  let aportesCents = 0;
+  let saidasCents = 0;
+
+  for (const tx of transactions) {
+    if (tx.kind === 'income') {
+      const src = tx.income_source_id
+        ? sourceMap.get(tx.income_source_id)
+        : undefined;
+      if (src && src.counts_as_earning === false) {
+        aportesCents += tx.net_cents;
+      } else {
+        entradasGanhoCents += tx.net_cents;
+      }
+    } else if (tx.kind === 'expense') {
+      saidasCents += tx.net_cents;
+    }
+  }
+
+  return { entradasGanhoCents, aportesCents, saidasCents };
+}

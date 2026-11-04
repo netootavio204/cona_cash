@@ -1,8 +1,12 @@
-# PRD — Caixa Simples (nome provisório)
-Versão do documento: 1.0 | Status: BETA (uso só do Octavio, preparado para vários usuários)
+# PRD — Cona Cash (antes chamado Caixa Simples)
+Versão do documento: **1.1** | Status: BETA (uso só do Octavio, preparado para vários usuários)
+
+## Histórico de versões
+- **1.0** — versão inicial (Fases 1 a 6).
+- **1.1** — (04/11/2026) • O app deixa de ser focado em corridas: nasce o conceito de **Fonte de renda** (99, vendas de peças 3D, etc.) e de **Aporte** (dinheiro colocado que não é ganho) • **Layout de computador/TV** com menu lateral e dashboard, mantendo o layout de celular **idêntico** ao atual • Novas fases **3B** e **3C**; Fases 4, 5 e 6 ajustadas. **Nada do que já foi construído nas Fases 1–3 deve ser apagado ou refeito.**
 
 ## 1. Visão
-App **simples** para quem recebe de várias formas e em várias contas (ex.: motorista de aplicativo) controlar **o que entra e o que sai**, ver o saldo de cada conta, acompanhar metas e consultar relatórios. Prioridade: **fácil de entender, rápido de usar, nunca quebrar**.
+App **simples** para quem tem **várias fontes de renda**, recebe de várias formas e em várias contas (ex.: motorista de aplicativo que também vende peças impressas em 3D) controlar **o que entra e o que sai**, ver o saldo de cada conta, acompanhar metas e consultar relatórios. Prioridade: **fácil de entender, rápido de usar, nunca quebrar**.
 
 Primeiro um **web app (PWA)**; depois um **APK Android** (Capacitor) usando o **mesmo banco Supabase**.
 
@@ -14,6 +18,9 @@ Primeiro um **web app (PWA)**; depois um **APK Android** (Capacitor) usando o **
 ## 3. Conceitos
 - **Conta**: onde o dinheiro fica. Padrão inicial: *Conta 1, Conta 2, Conta 3* (renomeáveis para nomes de banco), *Bolso (dinheiro)*. Tipo: `banco` ou `dinheiro`. Pode ser arquivada (não apagada se tiver lançamentos).
 - **Forma de pagamento (origem da entrada)**: padrão *Maquininha (cartão)*, *Pix*, *Online (app)*, *Dinheiro*. Cada uma tem: **conta de destino padrão** e **taxa %** (padrão 0%). Ex.: Maquininha → Conta 1, taxa configurável; Pix → Conta 2; Online → Conta 3; Dinheiro → Bolso.
+- **Fonte de renda (de ONDE veio o dinheiro)** — NOVO v1.1: independe da forma de pagamento. Padrão inicial (todas editáveis/arquiváveis): *Corridas (99)*, *Venda 3D — Mercado Livre*, *Venda 3D — Presencial*, *Venda 3D — Bares e mercados*, *Outros ganhos* e *Aporte (dinheiro colocado)*. Cada fonte tem: nome, ícone, cor, forma de pagamento padrão (opcional) e a chave **"conta como ganho"**.
+  - **Aporte** = dinheiro que o usuário coloca numa conta (ex.: depositar do próprio bolso). Entra no **saldo**, mas **não conta como ganho** (fica fora de relatórios de ganho e de metas de ganho).
+  - **Fonte × Forma**: a *fonte* diz de onde veio (ex.: Mercado Livre); a *forma* diz como chegou (ex.: Online → Conta 3). Escolher a fonte sugere a forma e a conta, mas tudo é editável.
 - **Categoria de saída**: padrão *Abastecimento, Alimentação, Peça de carro, Manutenção, Lavagem, Gasto avulso* (editáveis, com ícone e cor).
 - **Lançamentos**: `entrada`, `saida`, `transferencia`.
 - **Saldo da conta** = saldo inicial + entradas líquidas − saídas ± transferências.
@@ -28,13 +35,13 @@ Primeiro um **web app (PWA)**; depois um **APK Android** (Capacitor) usando o **
 - Sessão persistente; botão Sair.
 
 ### 4.2 Entradas (ganhos)
-- **Lançamento rápido (um valor)**: valor, forma de pagamento (conta destino vem sugerida, editável), data/hora (padrão agora), observação opcional.
-- **Lançamento em lote (fim do dia)**: tela com várias linhas (valor + forma de pagamento + conta), botão "adicionar linha", total do lote visível, salvar tudo de uma vez.
+- **Lançamento rápido (um valor)**: valor, **fonte de renda**, forma de pagamento (conta destino vem sugerida, editável), data/hora (padrão agora), observação opcional. Entradas sem fonte (antigas) aparecem como "Sem fonte" e podem ser editadas.
+- **Lançamento em lote (fim do dia)**: tela com várias linhas (valor + **fonte** + forma de pagamento + conta), botão "adicionar linha", total do lote visível, salvar tudo de uma vez.
 - Taxa: se a forma de pagamento tem taxa %, o app guarda **valor bruto**, **taxa (R$)** e **valor líquido** (o que cai na conta). A taxa pode ser ajustada manualmente no lançamento. O valor líquido é o que soma no saldo.
 - Tudo editável e excluível.
 
 ### 4.3 Saídas (gastos)
-- Valor, categoria, **conta de onde saiu**, data/hora, observação.
+- Valor, categoria, **conta de onde saiu**, data/hora, observação e **"ligar a uma fonte" (opcional)** — ex.: filamento ligado a *Venda 3D*, para ver o lucro por fonte.
 - Tudo editável e excluível.
 
 ### 4.4 Transferências
@@ -49,29 +56,35 @@ Primeiro um **web app (PWA)**; depois um **APK Android** (Capacitor) usando o **
 
 ### 4.6 Metas (simples, fáceis de entender)
 Três tipos, cada um com período **diário, semanal ou mensal**:
-1. **Meta de ganho**: "ganhar R$ X no período". Progresso = soma das entradas **líquidas** do período ÷ X.
+1. **Meta de ganho**: "ganhar R$ X no período". Progresso = soma das entradas **líquidas** do período (somente fontes que **contam como ganho**; aportes não entram) ÷ X. Pode ser **geral** (todas as fontes) ou **de uma fonte** (ex.: só vendas 3D).
 2. **Limite de gastos**: "gastar no máximo R$ X". Progresso = soma das saídas do período ÷ X. Verde até 80%, amarelo 80–100%, vermelho acima (estourou).
-3. **Meta de economia**: "guardar R$ X". Progresso = (entradas líquidas − saídas) do período ÷ X, mínimo 0.
+3. **Meta de economia**: "guardar R$ X". Progresso = (entradas líquidas que contam como ganho − saídas) do período ÷ X, mínimo 0.
 - Barra de progresso **que realmente enche**, com % e "faltam R$ …". Cálculos centralizados em UM módulo (`goalProgress`) com **testes automatizados** (o app anterior do Octavio teve barra que não funcionava: isto é critério de aceite crítico).
 - Ao bater a meta: **efeito visual** (confete) + **efeito sonoro** (som curto de conquista) uma única vez por meta/período; ícone de medalha na meta batida. Opção "som ligado/desligado" nas configurações.
 - Metas editáveis, pausáveis e excluíveis.
 
-### 4.7 Dashboard (tela inicial)
+### 4.7 Dashboard (tela inicial) — dois layouts (ver 7.2)
 - Saldo total + saldo de cada conta (cards).
 - Hoje: entradas líquidas, saídas, resultado.
 - Barras das metas ativas.
+- **Ganhos por fonte** (rosca/lista) e **lucro por fonte** (ganhos líquidos − gastos ligados à fonte).
+- **Celular** (< 1024 px): empilhado, exatamente como já está hoje, com os blocos novos adicionados abaixo.
+- **Computador/TV** (≥ 1024 px): grade de painéis com menu lateral — KPIs no topo (saldo total, ganhos hoje, saídas hoje, resultado), gráfico de ganhos por dia (7/30 dias), ganhos por fonte, gastos por categoria, saldos por conta, metas e tabela dos últimos lançamentos.
 - Botões grandes: **+ Entrada**, **+ Saída**, **Transferir**, **Lote do dia**.
 - Últimos 10 lançamentos.
 
 ### 4.8 Relatórios
 - Períodos: **Dia, Semana, Mês** (com navegação anterior/próximo) e intervalo personalizado.
-- Mostra: total bruto, taxas pagas, total líquido, total de saídas, resultado, entradas por forma de pagamento, entradas por conta, saídas por categoria, lista de lançamentos.
+- Mostra: total bruto, taxas pagas, total líquido, total de saídas, resultado, **entradas por fonte**, **lucro por fonte**, **aportes (separados dos ganhos)**, entradas por forma de pagamento, entradas por conta, saídas por categoria, lista de lançamentos. Filtro por fonte.
 - Gráficos simples e leves (barras/rosca).
 - **Exportar PDF** do relatório (visual limpo, com período, totais e lista), pelo navegador.
 
 ### 4.9 Configurações (área administrativa do usuário)
 - Contas (criar, editar, arquivar), saldo inicial.
 - Formas de pagamento (nome, conta destino padrão, taxa %).
+- **Fontes de renda** (nome, ícone, cor, forma de pagamento padrão, "conta como ganho", arquivar).
+- **Tags rápidas** editáveis (substituem as tags fixas #Uber/#99/…).
+- **Sugestões de categorias para peças 3D** (Filamento, Manutenção da impressora, Embalagem, Frete, Taxas de marketplace) com botão "Adicionar sugestões" (não duplica).
 - Categorias de saída (nome, ícone, cor).
 - Metas.
 - Preferências: som ligado/desligado, moeda (R$), primeiro dia da semana.
@@ -94,8 +107,9 @@ Todas com `id uuid pk`, `created_at`, `updated_at`; valores em **centavos (bigin
 - `accounts`: `user_id`, `name`, `type` (`bank`|`cash`), `initial_balance_cents`, `color`, `archived`.
 - `payment_methods`: `user_id`, `name`, `default_account_id`, `fee_percent numeric(5,2)`, `archived`.
 - `categories`: `user_id`, `name`, `icon`, `color`, `archived`.
-- `transactions`: `user_id`, `kind` (`income`|`expense`|`transfer`), `occurred_at timestamptz`, `account_id` (conta afetada / origem), `to_account_id` (só transferência), `payment_method_id` (entrada), `category_id` (saída), `gross_cents`, `fee_cents`, `net_cents`, `note`, `batch_id` (lote), `deleted_at` (lixeira).
-- `goals`: `user_id`, `type` (`income`|`spending_limit`|`savings`), `period` (`day`|`week`|`month`), `target_cents`, `active`, `celebrated_periods jsonb` (períodos já comemorados).
+- `income_sources` (NOVO v1.1): `user_id`, `name`, `icon`, `color`, `default_payment_method_id` (opcional), `counts_as_earning boolean default true`, `archived`.
+- `transactions`: `user_id`, `kind` (`income`|`expense`|`transfer`), `occurred_at timestamptz`, `account_id` (conta afetada / origem), `to_account_id` (só transferência), `payment_method_id` (entrada), `category_id` (saída), `gross_cents`, `fee_cents`, `net_cents`, `note`, `batch_id` (lote), `income_source_id` (fonte; opcional; em saída = "ligada à fonte"), `deleted_at` (lixeira).
+- `goals`: `user_id`, `type` (`income`|`spending_limit`|`savings`), `period` (`day`|`week`|`month`), `target_cents`, `active`, `income_source_id` (opcional; meta só de uma fonte), `celebrated_periods jsonb` (períodos já comemorados). `profiles` ganha `quick_tags text[]`.
 - `audit_log`: `user_id`, `table_name`, `record_id`, `action` (`create`|`update`|`delete`|`restore`), `before jsonb`, `after jsonb`, `at timestamptz`.
 - Triggers: criar `profiles` ao cadastrar (status `pending`); **bloquear cadastro quando `signup_open=false`**; popular padrões (contas, formas, categorias) na aprovação/criação; gravar `audit_log` em `transactions`.
 - Funções/views: saldo por conta; resumo por período (totais, por forma, por conta, por categoria); progresso de metas.
@@ -113,6 +127,14 @@ Todas com `id uuid pk`, `created_at`, `updated_at`; valores em **centavos (bigin
 - Valores em R$ longos usam fonte que se ajusta (`clamp`) e abreviam (ex.: R$ 1,2 mil) só no card pequeno, com valor completo ao tocar.
 - Testar em 320, 360, 390, 412 px e com fonte do sistema aumentada. **Critério de aceite em todas as fases.**
 
+### 7.2 LAYOUT RESPONSIVO: CELULAR × COMPUTADOR/TV (NOVO v1.1)
+**Regra de ouro: o layout de celular NÃO muda.** Abaixo de **1024 px** tudo fica exatamente como está hoje (barra de botões embaixo, telas empilhadas, modais como estão). Tablet em pé também usa o layout de celular.
+- **≥ 1024 px (notebook/computador)**: **menu lateral fixo à esquerda** (logo Cona, Início, Lançamentos, Relatórios, Metas, Config e Admin se for admin; recolhível para só ícones), barra superior com título da página e botões **+ Entrada / + Saída / Transferir**, conteúdo centralizado (máx. 1440 px), dashboard em grade, lançamentos em **tabela**, modais como **janela centralizada**.
+- **≥ 1920 px (TV/monitor grande)**: textos e espaçamentos maiores, **foco visível** forte e navegação por **teclado/controle remoto** (Tab/setas/Enter); nada que dependa só de "passar o mouse".
+- Ao redimensionar a janela o app alterna entre os dois layouts **sem recarregar e sem perder o que o usuário digitou**.
+- Implementação: um único `AppShell`; `BottomNav` com `lg:hidden`, `Sidebar` com `hidden lg:flex`; ajustes de desktop **somente** com classes `lg:`/`xl:`/`2xl:` (nunca alterar as classes base do celular).
+- A regra anti-vazamento (7.1) vale também no desktop.
+
 ## 8. Deploy e versões
 - Código no **GitHub**; **Vercel** conectada ao repositório (deploy automático da `main`, preview nas branches).
 - Variáveis na Vercel: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
@@ -128,3 +150,5 @@ Integração automática com bancos/Open Finance, notificações push, lançamen
 4. Nenhum texto vaza em nenhuma tela de 320 a 430 px.
 5. Relatório do dia/semana/mês confere e exporta em PDF.
 6. Cadastro precisa de aprovação do admin; o botão fecha o cadastro de verdade.
+7. (v1.1) É possível lançar ganhos de qualquer fonte (99, vendas 3D, etc.) e **aportes**; relatórios e metas separam **ganho** de **aporte**.
+8. (v1.1) No computador aparece menu lateral + dashboard; abaixo de 1024 px o app fica **idêntico** ao de antes (comprovado por comparação de imagens).

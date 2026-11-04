@@ -12,6 +12,7 @@ export interface Profile {
   status: UserStatus;
   sound_enabled: boolean;
   week_starts_on: 0 | 1;
+  quick_tags?: string[];
   created_at: string;
   updated_at: string;
 }
@@ -72,6 +73,7 @@ export type CategoryIconName =
   | 'car'
   | 'shopping-bag'
   | 'smartphone'
+  | 'wallet'
   | 'heart'
   | 'home'
   | 'tag';
@@ -87,6 +89,20 @@ export interface Category {
   updated_at: string;
 }
 
+export interface IncomeSource {
+  id: string;
+  user_id: string;
+  name: string;
+  icon: CategoryIconName;
+  color: string;
+  counts_as_earning: boolean;
+  default_payment_method_id: string | null;
+  default_account_id: string | null;
+  archived: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Transaction {
   id: string;
   user_id: string;
@@ -96,6 +112,7 @@ export interface Transaction {
   to_account_id: string | null;
   payment_method_id: string | null;
   category_id: string | null;
+  income_source_id: string | null;
   gross_cents: number;
   fee_cents: number;
   net_cents: number;
@@ -128,19 +145,25 @@ export const PALETA_CORES = [
   { nome: 'Ciano', valor: '#06B6D4' },
 ];
 
-export const TAGS_RAPIDAS_ENTRADA = [
-  '#Uber',
+export const DEFAULT_QUICK_TAGS = [
+  '#Filamento',
+  '#MercadoLivre',
   '#99',
-  '#Particular',
-  '#Gorjeta',
-  '#PixDireto',
+  '#Gasolina',
+  '#Almoço',
 ];
 
-export const TAGS_RAPIDAS_SAIDA = [
-  '#Gasolina',
-  '#Etanol',
-  '#GNV',
-  '#Almoço',
-  '#Manutenção',
-  '#Lavagem',
+export const SUGESTOES_CATEGORIAS_3D: {
+  name: string;
+  icon: CategoryIconName;
+  color: string;
+}[] = [
+  { name: 'Filamento', icon: 'cog', color: '#FF7A1A' },
+  { name: 'Manutenção da impressora', icon: 'wrench', color: '#A855F7' },
+  { name: 'Embalagem', icon: 'shopping-bag', color: '#38BDF8' },
+  { name: 'Frete', icon: 'car', color: '#2EE59D' },
+  { name: 'Taxas de marketplace', icon: 'receipt', color: '#FFC940' },
 ];
+
+export const TAGS_RAPIDAS_ENTRADA = DEFAULT_QUICK_TAGS;
+export const TAGS_RAPIDAS_SAIDA = DEFAULT_QUICK_TAGS;

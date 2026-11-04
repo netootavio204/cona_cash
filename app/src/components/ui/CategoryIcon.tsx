@@ -12,21 +12,23 @@ import {
   Heart,
   Home,
   Tag,
+  Wallet,
 } from 'lucide-react';
 import type { CategoryIconName } from '../../types/database';
 
 export const CATEGORY_ICONS_LIST: { id: CategoryIconName; label: string }[] = [
   { id: 'fuel', label: 'Combustível' },
   { id: 'utensils', label: 'Alimentação' },
-  { id: 'cog', label: 'Peças' },
+  { id: 'cog', label: 'Peças / 3D' },
   { id: 'wrench', label: 'Manutenção' },
   { id: 'droplets', label: 'Lavagem' },
-  { id: 'receipt', label: 'Recibo / Avulso' },
-  { id: 'car', label: 'Carro' },
-  { id: 'shopping-bag', label: 'Compras' },
+  { id: 'receipt', label: 'Recibo / Taxa' },
+  { id: 'car', label: 'Corrida / Frete' },
+  { id: 'shopping-bag', label: 'Vendas / Loja' },
   { id: 'smartphone', label: 'Celular / App' },
+  { id: 'wallet', label: 'Carteira / Aporte' },
   { id: 'heart', label: 'Saúde' },
-  { id: 'home', label: 'Casa' },
+  { id: 'home', label: 'Casa / Estoque' },
   { id: 'tag', label: 'Geral' },
 ];
 
@@ -53,6 +55,8 @@ export const CategoryIcon: React.FC<{
       return <ShoppingBag className={className} />;
     case 'smartphone':
       return <Smartphone className={className} />;
+    case 'wallet':
+      return <Wallet className={className} />;
     case 'heart':
       return <Heart className={className} />;
     case 'home':

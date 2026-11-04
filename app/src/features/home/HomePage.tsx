@@ -21,6 +21,7 @@ import {
   fetchAccountBalances,
   fetchAccounts,
   fetchCategories,
+  fetchIncomeSources,
   fetchPaymentMethods,
   fetchTransactions,
 } from '../../api/supabase';
@@ -28,6 +29,7 @@ import type {
   Account,
   AccountBalance,
   Category,
+  IncomeSource,
   PaymentMethod,
   Transaction,
   TransactionKind,
@@ -35,6 +37,7 @@ import type {
 import {
   formatDateTimeBR,
   getTodaySaoPauloBoundsISO,
+  sumEarningsAndExpenses,
 } from '../../utils/format';
 import { Card } from '../../components/ui/Card';
 import { Botao } from '../../components/ui/Botao';
@@ -59,6 +62,7 @@ export const HomePage: React.FC = () => {
 
   const [saldosContas, setSaldosContas] = useState<AccountBalance[]>([]);
   const [contas, setContas] = useState<Account[]>([]);
+  const [fontes, setFontes] = useState<IncomeSource[]>([]);
   const [formas, setFormas] = useState<PaymentMethod[]>([]);
   const [categorias, setCategorias] = useState<Category[]>([]);
   const [ultimosLancamentos, setUltimosLancamentos] = useState<Transaction[]>([]);
@@ -129,36 +133,37 @@ export const HomePage: React.FC = () => {
       await ensureMyDefaults();
       const { startISO, endISO } = getTodaySaoPauloBoundsISO();
 
-      const [balances, accs, pms, cats, recentTx, todayTx] = await Promise.all([
-        fetchAccountBalances(),
-        fetchAccounts(),
-        fetchPaymentMethods(),
-        fetchCategories(),
-        fetchTransactions({ page: 1, pageSize: 10 }),
-        fetchTransactions({
-          page: 1,
-          pageSize: 500,
-          startDateISO: startISO,
-          endDateISO: endISO,
-        }),
-      ]);
+      const [balances, accs, srcs, pms, cats, recentTx, todayTx] =
+        await Promise.all([
+          fetchAccountBalances(),
+          fetchAccounts(),
+          fetchIncomeSources(),
+          fetchPaymentMethods(),
+          fetchCategories(),
+          fetchTransactions({ page: 1, pageSize: 10 }),
+          fetchTransactions({
+            page: 1,
+            pageSize: 500,
+            startDateISO: startISO,
+            endDateISO: endISO,
+          }),
+        ]);
 
       setSaldosContas(balances.filter((b) => !b.archived));
       setContas(accs);
+      setFontes(srcs);
       setFormas(pms);
       setCategorias(cats);
       setUltimosLancamentos(recentTx.data);
 
-      // Cálculo de hoje (Transferências NÃO contam como entrada nem saída — PRD 4.4)
-      let entradasHoje = 0;
-      let saidasHoje = 0;
-      for (const tx of todayTx.data) {
-        if (tx.kind === 'income') entradasHoje += tx.net_cents;
-        else if (tx.kind === 'expense') saidasHoje += tx.net_cents;
-      }
+      // Cálculo de hoje (Transferências e Aportes NÃO contam nos totais de ganho — PRD 3 & 4.4)
+      const { entradasGanhoCents, saidasCents } = sumEarningsAndExpenses(
+        todayTx.data,
+        srcs
+      );
       setResumoHoje({
-        entradasLiquidasCents: entradasHoje,
-        saidasCents: saidasHoje,
+        entradasLiquidasCents: entradasGanhoCents,
+        saidasCents,
       });
       setRefreshTrigger((n) => n + 1);
     } catch (err) {
@@ -197,6 +202,8 @@ export const HomePage: React.FC = () => {
     formas.find((f) => f.id === id)?.name || 'Entrada';
   const dadosCategoria = (id: string | null) =>
     categorias.find((cat) => cat.id === id);
+  const dadosFonte = (id: string | null) =>
+    fontes.find((src) => src.id === id);
 
   return (
     <div className="min-h-screen w-full bg-[#0B0B0D] text-[#F5F5F7] pb-24">
@@ -412,6 +419,9 @@ export const HomePage: React.FC = () => {
                 <div className="flex flex-col gap-2 min-w-0">
                   {ultimosLancamentos.map((tx) => {
                     const cat = dadosCategoria(tx.category_id);
+                    const src = dadosFonte(tx.income_source_id);
+                    const isAporte =
+                      tx.kind === 'income' && src && !src.counts_as_earning;
                     const titulo =
                       tx.kind === 'income'
                         ? nomeForma(tx.payment_method_id)
@@ -426,11 +436,13 @@ export const HomePage: React.FC = () => {
                             <span
                               className={[
                                 'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
-                                tx.kind === 'income'
-                                  ? 'bg-[#2EE59D]/15 text-[#2EE59D]'
-                                  : tx.kind === 'expense'
-                                    ? 'bg-[#FF3B30]/15 text-[#FF3B30]'
-                                    : 'bg-[#FFC940]/15 text-[#FFC940]',
+                                isAporte
+                                  ? 'bg-[#06B6D4]/15 text-[#06B6D4]'
+                                  : tx.kind === 'income'
+                                    ? 'bg-[#2EE59D]/15 text-[#2EE59D]'
+                                    : tx.kind === 'expense'
+                                      ? 'bg-[#FF3B30]/15 text-[#FF3B30]'
+                                      : 'bg-[#FFC940]/15 text-[#FFC940]',
                               ].join(' ')}
                             >
                               {tx.kind === 'income' ? (
@@ -450,12 +462,36 @@ export const HomePage: React.FC = () => {
                             </span>
 
                             <div className="min-w-0">
-                              <p
-                                className="text-xs sm:text-sm font-bold text-white truncate"
-                                title={titulo}
-                              >
-                                {titulo}
-                              </p>
+                              <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                                <p
+                                  className="text-xs sm:text-sm font-bold text-white truncate"
+                                  title={titulo}
+                                >
+                                  {titulo}
+                                </p>
+                                {src ? (
+                                  <span
+                                    style={{
+                                      backgroundColor: `${src.color}20`,
+                                      borderColor: `${src.color}55`,
+                                      color: src.color,
+                                    }}
+                                    className="text-[10px] px-1.5 py-0.5 rounded-full border font-bold max-w-[140px] truncate shrink-0"
+                                    title={src.name}
+                                  >
+                                    {src.name}
+                                  </span>
+                                ) : tx.kind === 'income' ? (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-[#9A9AA6] font-semibold shrink-0">
+                                    Sem fonte
+                                  </span>
+                                ) : null}
+                                {isAporte && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#06B6D4]/20 text-[#06B6D4] font-bold shrink-0">
+                                    APORTE
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-[11px] text-[#9A9AA6] truncate">
                                 {tx.kind !== 'transfer' && `${nomeConta(tx.account_id)} • `}
                                 {formatDateTimeBR(tx.occurred_at)}
@@ -506,6 +542,7 @@ export const HomePage: React.FC = () => {
         {aba === 'lancamentos' && (
           <TransactionsPage
             contas={contas}
+            fontes={fontes}
             formas={formas}
             categorias={categorias}
             abrirNovoLancamento={abrirNovoLancamento}
@@ -578,8 +615,10 @@ export const HomePage: React.FC = () => {
             tipoInicial={tipoNovoLancamento}
             lancamentoEditando={lancamentoEditando}
             contas={contas}
+            fontes={fontes}
             formas={formas}
             categorias={categorias}
+            quickTags={perfil?.quick_tags}
             aoSalvarSucesso={(msg) => {
               mostrarAviso(msg, 'sucesso');
               carregarDadosGerais();
@@ -591,6 +630,7 @@ export const HomePage: React.FC = () => {
             aberto={modalLoteAberto}
             aoFechar={() => setModalLoteAberto(false)}
             contas={contas}
+            fontes={fontes}
             formas={formas}
             aoSalvarSucesso={(msg) => {
               mostrarAviso(msg, 'sucesso');

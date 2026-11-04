@@ -1,17 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
-import type {
-  Account,
-  AccountBalance,
-  AccountType,
-  AppSettings,
-  AuditLogEntry,
-  Category,
-  CategoryIconName,
-  PaymentMethod,
-  Profile,
-  Transaction,
-  TransactionKind,
-  UserStatus,
+import {
+  SUGESTOES_CATEGORIAS_3D,
+  type Account,
+  type AccountBalance,
+  type AccountType,
+  type AppSettings,
+  type AuditLogEntry,
+  type Category,
+  type CategoryIconName,
+  type IncomeSource,
+  type PaymentMethod,
+  type Profile,
+  type Transaction,
+  type TransactionKind,
+  type UserStatus,
 } from '../types/database';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
@@ -59,8 +61,8 @@ export async function fetchAppSettings(): Promise<AppSettings> {
     return {
       id: 1,
       signup_open: true,
-      schema_version: '003_transactions',
-      app_version: 'v0.3.0 beta',
+      schema_version: '003b_income_sources',
+      app_version: 'v0.3.1 beta',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -82,7 +84,12 @@ export async function fetchMyProfile(userId: string): Promise<Profile | null> {
 
 export async function updateMyPreferences(
   userId: string,
-  updates: { name?: string; sound_enabled?: boolean; week_starts_on?: 0 | 1 }
+  updates: {
+    name?: string;
+    sound_enabled?: boolean;
+    week_starts_on?: 0 | 1;
+    quick_tags?: string[];
+  }
 ): Promise<Profile> {
   const { data, error } = await supabase
     .from('profiles')
@@ -342,13 +349,119 @@ export async function deleteCategory(id: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function addSuggested3DCategories(
+  userId: string,
+  existingCategories: Category[]
+): Promise<number> {
+  const nomesExistentes = new Set(
+    existingCategories.map((c) => c.name.trim().toLowerCase())
+  );
+  const paraInserir = SUGESTOES_CATEGORIAS_3D.filter(
+    (sug) => !nomesExistentes.has(sug.name.trim().toLowerCase())
+  ).map((sug) => ({
+    user_id: userId,
+    name: sug.name,
+    icon: sug.icon,
+    color: sug.color,
+  }));
+
+  if (paraInserir.length === 0) {
+    return 0;
+  }
+
+  const { error } = await supabase.from('categories').insert(paraInserir);
+  if (error) throw error;
+  return paraInserir.length;
+}
+
 // ============================================================================
-// LANÇAMENTOS, LOTE DO DIA, LIXEIRA E AUDITORIA (Fase 3)
+// FONTES DE RENDA E APORTES (income_sources — Fase 3B)
+// ============================================================================
+
+export async function fetchIncomeSources(): Promise<IncomeSource[]> {
+  const { data, error } = await supabase
+    .from('income_sources')
+    .select('*')
+    .order('archived', { ascending: true })
+    .order('counts_as_earning', { ascending: false })
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+  return (data || []).map((row: any) => ({
+    ...row,
+    counts_as_earning: Boolean(row.counts_as_earning ?? true),
+    archived: Boolean(row.archived ?? false),
+  })) as IncomeSource[];
+}
+
+export async function createIncomeSource(payload: {
+  user_id: string;
+  name: string;
+  icon: CategoryIconName;
+  color: string;
+  counts_as_earning: boolean;
+  default_payment_method_id: string | null;
+  default_account_id: string | null;
+}): Promise<IncomeSource> {
+  const { data, error } = await supabase
+    .from('income_sources')
+    .insert({
+      user_id: payload.user_id,
+      name: payload.name.trim(),
+      icon: payload.icon,
+      color: payload.color,
+      counts_as_earning: payload.counts_as_earning,
+      default_payment_method_id: payload.default_payment_method_id || null,
+      default_account_id: payload.default_account_id || null,
+    })
+    .select('*')
+    .single();
+
+  if (error) throw error;
+  return data as IncomeSource;
+}
+
+export async function updateIncomeSource(
+  id: string,
+  updates: Partial<{
+    name: string;
+    icon: CategoryIconName;
+    color: string;
+    counts_as_earning: boolean;
+    default_payment_method_id: string | null;
+    default_account_id: string | null;
+    archived: boolean;
+  }>
+): Promise<IncomeSource> {
+  const cleanUpdates: Record<string, any> = { ...updates };
+  if (typeof cleanUpdates.name === 'string') {
+    cleanUpdates.name = cleanUpdates.name.trim();
+  }
+
+  const { data, error } = await supabase
+    .from('income_sources')
+    .update(cleanUpdates)
+    .eq('id', id)
+    .select('*')
+    .single();
+
+  if (error) throw error;
+  return data as IncomeSource;
+}
+
+export async function deleteIncomeSource(id: string): Promise<void> {
+  const { error } = await supabase.from('income_sources').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ============================================================================
+// LANÇAMENTOS, LOTE DO DIA, LIXEIRA E AUDITORIA (Fase 3 + Fase 3B)
 // ============================================================================
 
 function normalizeTransaction(row: any): Transaction {
   return {
     ...row,
+    income_source_id: row.income_source_id ?? null,
     gross_cents: Number(row.gross_cents ?? 0),
     fee_cents: Number(row.fee_cents ?? 0),
     net_cents: Number(row.net_cents ?? 0),
@@ -361,6 +474,7 @@ export interface FetchTransactionsFilter {
   kind?: TransactionKind | 'all';
   accountId?: string;
   categoryId?: string;
+  incomeSourceId?: string; // '__none__' filtra "Sem fonte" (income_source_id IS NULL)
   startDateISO?: string;
   endDateISO?: string;
   search?: string;
@@ -399,6 +513,12 @@ export async function fetchTransactions(
     query = query.eq('category_id', filter.categoryId);
   }
 
+  if (filter.incomeSourceId === '__none__') {
+    query = query.is('income_source_id', null);
+  } else if (filter.incomeSourceId) {
+    query = query.eq('income_source_id', filter.incomeSourceId);
+  }
+
   if (filter.startDateISO) {
     query = query.gte('occurred_at', filter.startDateISO);
   }
@@ -431,6 +551,7 @@ export async function createTransaction(payload: {
   to_account_id?: string | null;
   payment_method_id?: string | null;
   category_id?: string | null;
+  income_source_id?: string | null;
   gross_cents: number;
   fee_cents?: number;
   net_cents: number;
@@ -452,6 +573,8 @@ export async function createTransaction(payload: {
         payload.kind === 'income' ? payload.payment_method_id || null : null,
       category_id:
         payload.kind === 'expense' ? payload.category_id || null : null,
+      income_source_id:
+        payload.kind !== 'transfer' ? payload.income_source_id || null : null,
       gross_cents: gross,
       fee_cents: fee,
       net_cents: net,
@@ -473,6 +596,7 @@ export async function createIncomeBatch(payload: {
     net_cents: number;
     account_id: string;
     payment_method_id: string | null;
+    income_source_id?: string | null;
     note?: string;
   }[];
 }): Promise<string> {
@@ -495,6 +619,7 @@ export async function updateTransaction(
     to_account_id?: string | null;
     payment_method_id?: string | null;
     category_id?: string | null;
+    income_source_id?: string | null;
     gross_cents: number;
     fee_cents?: number;
     note?: string;
@@ -515,6 +640,8 @@ export async function updateTransaction(
         payload.kind === 'income' ? payload.payment_method_id || null : null,
       category_id:
         payload.kind === 'expense' ? payload.category_id || null : null,
+      income_source_id:
+        payload.kind !== 'transfer' ? payload.income_source_id || null : null,
       gross_cents: gross,
       fee_cents: fee,
       net_cents: net,
@@ -526,6 +653,20 @@ export async function updateTransaction(
 
   if (error) throw error;
   return normalizeTransaction(data);
+}
+
+export async function bulkAssignIncomeSource(
+  transactionIds: string[],
+  incomeSourceId: string
+): Promise<number> {
+  if (transactionIds.length === 0) return 0;
+  const { error } = await supabase
+    .from('transactions')
+    .update({ income_source_id: incomeSourceId })
+    .in('id', transactionIds);
+
+  if (error) throw error;
+  return transactionIds.length;
 }
 
 export async function softDeleteTransaction(id: string): Promise<void> {

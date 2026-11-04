@@ -8,11 +8,11 @@ import {
   History,
 } from 'lucide-react';
 import {
-  TAGS_RAPIDAS_ENTRADA,
-  TAGS_RAPIDAS_SAIDA,
+  DEFAULT_QUICK_TAGS,
   type Account,
   type AuditLogEntry,
   type Category,
+  type IncomeSource,
   type PaymentMethod,
   type Transaction,
   type TransactionKind,
@@ -49,8 +49,10 @@ export interface TransactionFormModalProps {
   tipoInicial: TransactionKind;
   lancamentoEditando?: Transaction | null;
   contas: Account[];
+  fontes: IncomeSource[];
   formas: PaymentMethod[];
   categorias: Category[];
+  quickTags?: string[];
   aoSalvarSucesso: (mensagem: string) => void;
   aoErro: (mensagem: string) => void;
 }
@@ -62,20 +64,26 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
   tipoInicial,
   lancamentoEditando,
   contas,
+  fontes,
   formas,
   categorias,
+  quickTags,
   aoSalvarSucesso,
   aoErro,
 }) => {
   const contasAtivas = contas.filter((c) => !c.archived);
+  const fontesAtivas = fontes.filter((src) => !src.archived);
   const formasAtivas = formas.filter((f) => !f.archived);
   const categoriasAtivas = categorias.filter((cat) => !cat.archived);
+  const tagsParaExibir =
+    quickTags && quickTags.length > 0 ? quickTags : DEFAULT_QUICK_TAGS;
 
   const [tipo, setTipo] = useState<TransactionKind>(tipoInicial);
   const [brutoCentavos, setBrutoCentavos] = useState(0);
   const [taxaCentavos, setTaxaCentavos] = useState(0);
   const [taxaManual, setTaxaManual] = useState(false);
 
+  const [fonteId, setFonteId] = useState<string>('');
   const [formaId, setFormaId] = useState<string>('');
   const [categoriaId, setCategoriaId] = useState<string>('');
   const [contaId, setContaId] = useState<string>('');
@@ -95,6 +103,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
       setBrutoCentavos(lancamentoEditando.gross_cents);
       setTaxaCentavos(lancamentoEditando.fee_cents);
       setTaxaManual(true);
+      setFonteId(lancamentoEditando.income_source_id || '');
       setFormaId(lancamentoEditando.payment_method_id || '');
       setCategoriaId(lancamentoEditando.category_id || '');
       setContaId(lancamentoEditando.account_id);
@@ -113,13 +122,29 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
       setEscolherDataHora(false);
       setDataHoraLocal(toSaoPauloDateTimeLocal());
 
-      const primeiraForma = formasAtivas[0];
+      const primeiraFonte =
+        fontesAtivas.find((s) => s.counts_as_earning) || fontesAtivas[0];
+      const fontePadraoId =
+        tipoInicial === 'income' ? primeiraFonte?.id || '' : '';
+      setFonteId(fontePadraoId);
+
+      const formaSugeridaPelaFonte =
+        tipoInicial === 'income' && primeiraFonte?.default_payment_method_id
+          ? formasAtivas.find(
+              (f) => f.id === primeiraFonte.default_payment_method_id
+            )
+          : undefined;
+
+      const primeiraForma = formaSugeridaPelaFonte || formasAtivas[0];
       setFormaId(primeiraForma?.id || '');
       setCategoriaId(categoriasAtivas[0]?.id || '');
 
       const contaSugerida =
-        tipoInicial === 'income' && primeiraForma?.default_account_id
-          ? primeiraForma.default_account_id
+        tipoInicial === 'income'
+          ? primeiraFonte?.default_account_id ||
+            primeiraForma?.default_account_id ||
+            contasAtivas[0]?.id ||
+            ''
           : contasAtivas[0]?.id || '';
       setContaId(contaSugerida);
 
@@ -130,6 +155,32 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
       setContaDestinoId(segundaConta);
     }
   }, [aberto, lancamentoEditando, tipoInicial]);
+
+  const selecionarFonteRenda = (src: IncomeSource) => {
+    setFonteId(src.id);
+    if (tipo === 'income') {
+      if (src.default_payment_method_id) {
+        const pm = formas.find((f) => f.id === src.default_payment_method_id);
+        if (pm) {
+          setFormaId(pm.id);
+          setTaxaManual(false);
+          const { feeCents } = calculateFeeAndNetFromPercent(
+            brutoCentavos,
+            Number(pm.fee_percent || 0)
+          );
+          setTaxaCentavos(feeCents);
+        }
+      }
+      if (src.default_account_id) {
+        setContaId(src.default_account_id);
+      } else if (src.default_payment_method_id) {
+        const pm = formas.find((f) => f.id === src.default_payment_method_id);
+        if (pm?.default_account_id) {
+          setContaId(pm.default_account_id);
+        }
+      }
+    }
+  };
 
   // Recalcula taxa automaticamente quando muda o valor bruto ou a forma de pagamento (se não estiver em ajuste manual)
   useEffect(() => {
@@ -209,6 +260,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
           to_account_id: tipo === 'transfer' ? contaDestinoId : null,
           payment_method_id: tipo === 'income' ? formaId || null : null,
           category_id: tipo === 'expense' ? categoriaId || null : null,
+          income_source_id: tipo !== 'transfer' ? fonteId || null : null,
           gross_cents: brutoCentavos,
           fee_cents: tipo === 'income' ? taxaCentavos : 0,
           note: observacao,
@@ -223,14 +275,18 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
           to_account_id: tipo === 'transfer' ? contaDestinoId : null,
           payment_method_id: tipo === 'income' ? formaId || null : null,
           category_id: tipo === 'expense' ? categoriaId || null : null,
+          income_source_id: tipo !== 'transfer' ? fonteId || null : null,
           gross_cents: brutoCentavos,
           fee_cents: tipo === 'income' ? taxaCentavos : 0,
           net_cents: liquidoCentavos,
           note: observacao,
         });
+        const fonteSelecionada = fontes.find((s) => s.id === fonteId);
         const msg =
           tipo === 'income'
-            ? `Entrada de ${formatCentsToBRL(liquidoCentavos)} líquidos salva!`
+            ? fonteSelecionada && !fonteSelecionada.counts_as_earning
+              ? `Aporte de ${formatCentsToBRL(liquidoCentavos)} adicionado ao saldo!`
+              : `Entrada de ${formatCentsToBRL(liquidoCentavos)} líquidos salva!`
             : tipo === 'expense'
               ? `Saída de ${formatCentsToBRL(brutoCentavos)} registrada!`
               : `Transferência de ${formatCentsToBRL(brutoCentavos)} realizada!`;
@@ -253,6 +309,10 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
         : 'Transferir entre Contas';
 
   const formaAtual = formas.find((f) => f.id === formaId);
+  const fonteAtual = fontes.find((s) => s.id === fonteId);
+  const fontesParaExibir = fontes.filter(
+    (s) => !s.archived || s.id === fonteId
+  );
 
   return (
     <Modal aberto={aberto} aoFechar={aoFechar} titulo={tituloModal}>
@@ -312,12 +372,58 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
           aoMudarCentavos={setBrutoCentavos}
         />
 
-        {/* 2º CAMPO (SE ENTRADA): FORMA DE PAGAMENTO + CÁLCULO DE TAXA */}
+        {/* 2º CAMPO (SE ENTRADA): FONTE DE RENDA + FORMA DE PAGAMENTO + CÁLCULO DE TAXA */}
         {tipo === 'income' && (
           <>
+            {/* 2. Fonte de renda (Fase 3B item 4) */}
             <div className="flex flex-col gap-1.5 min-w-0">
               <span className="text-xs sm:text-sm font-medium text-[#F5F5F7] truncate">
-                2. Forma de pagamento (preenche conta e taxa automático)
+                2. Fonte de renda (sugere forma e conta)
+              </span>
+              <div className="grid grid-cols-2 gap-2 min-w-0">
+                {fontesParaExibir.map((src) => {
+                  const selecionada = fonteId === src.id;
+                  return (
+                    <button
+                      key={src.id}
+                      type="button"
+                      onClick={() => selecionarFonteRenda(src)}
+                      className={[
+                        'min-h-[44px] px-2.5 py-1.5 rounded-xl border flex items-center gap-2 text-left transition-all min-w-0 overflow-hidden',
+                        selecionada
+                          ? 'bg-[#FF7A1A]/20 border-[#FF7A1A] text-white font-bold'
+                          : 'bg-[#0B0B0D] border-[#262630] text-[#9A9AA6] hover:text-white',
+                      ].join(' ')}
+                    >
+                      <span
+                        style={{ color: src.color }}
+                        className="shrink-0 flex items-center"
+                      >
+                        <CategoryIcon name={src.icon} className="w-4 h-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs block truncate">{src.name}</span>
+                        {!src.counts_as_earning && (
+                          <span className="text-[10px] text-[#06B6D4] font-semibold block truncate">
+                            Aporte (não é ganho)
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {fonteAtual && !fonteAtual.counts_as_earning && (
+                <div className="px-3 py-1.5 rounded-lg bg-[#06B6D4]/15 border border-[#06B6D4]/40 text-[11px] text-[#06B6D4]">
+                  <strong>Aporte selecionado:</strong> o valor vai somar no saldo da conta, mas ficará fora dos totais de ganho.
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1.5 min-w-0">
+              <span className="text-xs sm:text-sm font-medium text-[#F5F5F7] truncate">
+                3. Forma de pagamento (preenche conta e taxa automático)
               </span>
               <div className="grid grid-cols-2 gap-2 min-w-0">
                 {formasAtivas.map((pm) => {
@@ -405,39 +511,66 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
           </>
         )}
 
-        {/* 2º CAMPO (SE SAÍDA): CATEGORIA */}
+        {/* 2º CAMPO (SE SAÍDA): CATEGORIA + LIGAR A UMA FONTE (OPCIONAL) */}
         {tipo === 'expense' && (
-          <div className="flex flex-col gap-1.5 min-w-0">
-            <span className="text-xs sm:text-sm font-medium text-[#F5F5F7] truncate">
-              2. Categoria do gasto
-            </span>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 min-w-0">
-              {categoriasAtivas.map((cat) => {
-                const selecionada = categoriaId === cat.id;
-                return (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => setCategoriaId(cat.id)}
-                    className={[
-                      'min-h-[44px] px-2.5 py-1.5 rounded-xl border flex items-center gap-2 transition-all min-w-0 overflow-hidden',
-                      selecionada
-                        ? 'bg-[#FF7A1A]/20 border-[#FF7A1A] text-white font-bold'
-                        : 'bg-[#0B0B0D] border-[#262630] text-[#9A9AA6] hover:text-white',
-                    ].join(' ')}
-                  >
-                    <span
-                      style={{ color: cat.color }}
-                      className="shrink-0 flex items-center"
+          <>
+            <div className="flex flex-col gap-1.5 min-w-0">
+              <span className="text-xs sm:text-sm font-medium text-[#F5F5F7] truncate">
+                2. Categoria do gasto
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 min-w-0">
+                {categoriasAtivas.map((cat) => {
+                  const selecionada = categoriaId === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setCategoriaId(cat.id)}
+                      className={[
+                        'min-h-[44px] px-2.5 py-1.5 rounded-xl border flex items-center gap-2 transition-all min-w-0 overflow-hidden',
+                        selecionada
+                          ? 'bg-[#FF7A1A]/20 border-[#FF7A1A] text-white font-bold'
+                          : 'bg-[#0B0B0D] border-[#262630] text-[#9A9AA6] hover:text-white',
+                      ].join(' ')}
                     >
-                      <CategoryIcon name={cat.icon} className="w-4 h-4" />
-                    </span>
-                    <span className="text-xs truncate">{cat.name}</span>
-                  </button>
-                );
-              })}
+                      <span
+                        style={{ color: cat.color }}
+                        className="shrink-0 flex items-center"
+                      >
+                        <CategoryIcon name={cat.icon} className="w-4 h-4" />
+                      </span>
+                      <span className="text-xs truncate">{cat.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+
+            {/* Campo opcional: Ligar a uma fonte (Fase 3B item 6) */}
+            <div className="flex flex-col gap-1.5 min-w-0">
+              <label
+                htmlFor="select-fonte-gasto"
+                className="text-xs sm:text-sm font-medium text-[#F5F5F7] truncate"
+              >
+                Ligar a uma fonte (opcional — para lucro por fonte)
+              </label>
+              <select
+                id="select-fonte-gasto"
+                value={fonteId}
+                onChange={(e) => setFonteId(e.target.value)}
+                className="w-full min-h-[44px] px-3.5 bg-[#0B0B0D] border border-[#262630] rounded-xl text-[#F5F5F7] text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7A1A]/50"
+              >
+                <option value="">Sem vínculo com fonte específica</option>
+                {fontesParaExibir
+                  .filter((s) => s.counts_as_earning || s.id === fonteId)
+                  .map((src) => (
+                    <option key={src.id} value={src.id}>
+                      {src.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </>
         )}
 
         {/* SELEÇÃO DE CONTA (OU ORIGEM -> DESTINO NA TRANSFERÊNCIA) */}
@@ -448,7 +581,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
               className="text-xs sm:text-sm font-medium text-[#F5F5F7] truncate"
             >
               {tipo === 'income'
-                ? '3. Conta onde o dinheiro caiu'
+                ? '4. Conta onde o dinheiro caiu'
                 : '3. Conta de onde saiu o dinheiro'}
             </label>
             <select
@@ -510,29 +643,27 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
           </div>
         )}
 
-        {/* OBSERVAÇÃO + TAGS RÁPIDAS */}
+        {/* OBSERVAÇÃO + TAGS RÁPIDAS EDITÁVEIS */}
         <div className="flex flex-col gap-2 min-w-0">
           <Campo
             rotulo="Observação (opcional)"
             value={observacao}
             onChange={(e) => setObservacao(e.target.value)}
-            placeholder="Ex.: Corrida aeroporto, abastecimento posto X..."
+            placeholder="Ex.: Pedido #120, peça 3D sob encomenda, abastecimento..."
           />
 
           {tipo !== 'transfer' && (
             <div className="flex flex-wrap gap-1.5 min-w-0">
-              {(tipo === 'income' ? TAGS_RAPIDAS_ENTRADA : TAGS_RAPIDAS_SAIDA).map(
-                (tag) => (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => adicionarTagObservacao(tag)}
-                    className="px-2.5 py-1 rounded-full bg-[#0B0B0D] border border-[#262630] text-[11px] text-[#9A9AA6] hover:text-[#FF7A1A] hover:border-[#FF7A1A]/50 transition-colors"
-                  >
-                    {tag}
-                  </button>
-                )
-              )}
+              {tagsParaExibir.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => adicionarTagObservacao(tag)}
+                  className="px-2.5 py-1 rounded-full bg-[#0B0B0D] border border-[#262630] text-[11px] text-[#9A9AA6] hover:text-[#FF7A1A] hover:border-[#FF7A1A]/50 transition-colors"
+                >
+                  {tag}
+                </button>
+              ))}
             </div>
           )}
         </div>
@@ -593,6 +724,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
 interface LinhaLote {
   id: string;
   grossCents: number;
+  incomeSourceId: string;
   paymentMethodId: string;
   accountId: string;
   note: string;
@@ -602,6 +734,7 @@ export interface BatchIncomeModalProps {
   aberto: boolean;
   aoFechar: () => void;
   contas: Account[];
+  fontes: IncomeSource[];
   formas: PaymentMethod[];
   aoSalvarSucesso: (mensagem: string) => void;
   aoErro: (mensagem: string) => void;
@@ -611,20 +744,31 @@ export const BatchIncomeModal: React.FC<BatchIncomeModalProps> = ({
   aberto,
   aoFechar,
   contas,
+  fontes,
   formas,
   aoSalvarSucesso,
   aoErro,
 }) => {
   const contasAtivas = contas.filter((c) => !c.archived);
+  const fontesAtivas = fontes.filter((src) => !src.archived);
   const formasAtivas = formas.filter((f) => !f.archived);
 
   const criarLinhaVazia = (idx: number): LinhaLote => {
-    const pm = formasAtivas[idx % Math.max(1, formasAtivas.length)];
+    const src = fontesAtivas[idx % Math.max(1, fontesAtivas.length)];
+    const pmPadrao = src?.default_payment_method_id
+      ? formasAtivas.find((f) => f.id === src.default_payment_method_id)
+      : formasAtivas[idx % Math.max(1, formasAtivas.length)];
+    const pm = pmPadrao || formasAtivas[0];
     return {
       id: `${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 6)}`,
       grossCents: 0,
+      incomeSourceId: src?.id || '',
       paymentMethodId: pm?.id || '',
-      accountId: pm?.default_account_id || contasAtivas[0]?.id || '',
+      accountId:
+        src?.default_account_id ||
+        pm?.default_account_id ||
+        contasAtivas[0]?.id ||
+        '',
       note: '',
     };
   };
@@ -654,7 +798,26 @@ export const BatchIncomeModal: React.FC<BatchIncomeModalProps> = ({
       atuais.map((l) => {
         if (l.id !== id) return l;
         const atualizada = { ...l, ...parcial };
-        // Se trocou a forma de pagamento, sugere automaticamente a conta padrão dela
+        // Se trocou a fonte de renda, sugere forma e conta padrão da fonte
+        if (parcial.incomeSourceId !== undefined) {
+          const src = fontesAtivas.find((s) => s.id === parcial.incomeSourceId);
+          if (src) {
+            if (src.default_payment_method_id) {
+              atualizada.paymentMethodId = src.default_payment_method_id;
+            }
+            if (src.default_account_id) {
+              atualizada.accountId = src.default_account_id;
+            } else if (src.default_payment_method_id) {
+              const pm = formasAtivas.find(
+                (f) => f.id === src.default_payment_method_id
+              );
+              if (pm?.default_account_id) {
+                atualizada.accountId = pm.default_account_id;
+              }
+            }
+          }
+        }
+        // Se trocou a forma de pagamento diretamente, sugere a conta padrão dela
         if (parcial.paymentMethodId) {
           const pm = formasAtivas.find((f) => f.id === parcial.paymentMethodId);
           if (pm?.default_account_id) {
@@ -704,6 +867,7 @@ export const BatchIncomeModal: React.FC<BatchIncomeModalProps> = ({
         net_cents: netCents,
         account_id: l.accountId,
         payment_method_id: l.paymentMethodId || null,
+        income_source_id: l.incomeSourceId || null,
         note: l.note || observacaoGeral,
       };
     });
@@ -772,6 +936,27 @@ export const BatchIncomeModal: React.FC<BatchIncomeModalProps> = ({
                   centavos={l.grossCents}
                   aoMudarCentavos={(v) => atualizarLinha(l.id, { grossCents: v })}
                 />
+
+                <div className="min-w-0">
+                  <label className="text-[11px] text-[#9A9AA6] block truncate mb-1">
+                    Fonte de renda
+                  </label>
+                  <select
+                    value={l.incomeSourceId}
+                    onChange={(e) =>
+                      atualizarLinha(l.id, { incomeSourceId: e.target.value })
+                    }
+                    className="w-full min-h-[40px] px-2.5 bg-[#141418] border border-[#262630] rounded-lg text-xs text-white"
+                  >
+                    <option value="">Sem fonte definida</option>
+                    {fontesAtivas.map((src) => (
+                      <option key={src.id} value={src.id}>
+                        {src.name}
+                        {!src.counts_as_earning ? ' (Aporte)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
                 <div className="grid grid-cols-2 gap-2 min-w-0">
                   <div className="min-w-0">

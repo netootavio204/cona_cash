@@ -13,15 +13,19 @@ import {
   ChevronRight,
   ArrowUpRight,
   ArrowDownLeft,
+  Briefcase,
+  CheckCheck,
 } from 'lucide-react';
 import type {
   Account,
   Category,
+  IncomeSource,
   PaymentMethod,
   Transaction,
   TransactionKind,
 } from '../../types/database';
 import {
+  bulkAssignIncomeSource,
   fetchTransactions,
   restoreTransaction,
   softDeleteTransaction,
@@ -41,6 +45,7 @@ type PeriodoFiltro = 'todos' | 'hoje' | '7dias' | '30dias';
 
 export interface TransactionsPageProps {
   contas: Account[];
+  fontes: IncomeSource[];
   formas: PaymentMethod[];
   categorias: Category[];
   abrirNovoLancamento: (tipo: TransactionKind) => void;
@@ -59,6 +64,7 @@ const PAGE_SIZE = 50;
 
 export const TransactionsPage: React.FC<TransactionsPageProps> = ({
   contas,
+  fontes,
   formas,
   categorias,
   abrirNovoLancamento,
@@ -78,9 +84,15 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
   const [modoLixeira, setModoLixeira] = useState(false);
   const [filtroTipo, setFiltroTipo] = useState<TransactionKind | 'all'>('all');
   const [filtroContaId, setFiltroContaId] = useState('');
+  const [filtroFonteId, setFiltroFonteId] = useState('');
   const [filtroCategoriaId, setFiltroCategoriaId] = useState('');
   const [filtroPeriodo, setFiltroPeriodo] = useState<PeriodoFiltro>('todos');
   const [buscaTexto, setBuscaTexto] = useState('');
+
+  // Modal de edição em massa para "Sem fonte"
+  const [modalMassaAberto, setModalMassaAberto] = useState(false);
+  const [fonteMassaId, setFonteMassaId] = useState('');
+  const [salvandoMassa, setSalvandoMassa] = useState(false);
 
   // Modal de confirmação de exclusão
   const [txParaExcluir, setTxParaExcluir] = useState<Transaction | null>(null);
@@ -109,6 +121,7 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
         kind: filtroTipo,
         accountId: filtroContaId || undefined,
         categoryId: filtroCategoriaId || undefined,
+        incomeSourceId: filtroFonteId || undefined,
         startDateISO,
         endDateISO,
         search: buscaTexto,
@@ -125,6 +138,7 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
     pagina,
     filtroTipo,
     filtroContaId,
+    filtroFonteId,
     filtroCategoriaId,
     filtroPeriodo,
     buscaTexto,
@@ -173,6 +187,36 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
     formas.find((f) => f.id === id)?.name || 'Entrada';
   const dadosCategoria = (id: string | null) =>
     categorias.find((cat) => cat.id === id);
+  const dadosFonte = (id: string | null) =>
+    fontes.find((src) => src.id === id);
+
+  const entradasSemFonte = lancamentos.filter(
+    (tx) => tx.kind === 'income' && !tx.income_source_id && !tx.deleted_at
+  );
+  const fontesAtivas = fontes.filter((s) => !s.archived);
+
+  const abrirModalMassa = () => {
+    setFonteMassaId(fontesAtivas[0]?.id || '');
+    setModalMassaAberto(true);
+  };
+
+  const aplicarFonteEmMassa = async () => {
+    if (!fonteMassaId || entradasSemFonte.length === 0) return;
+    setSalvandoMassa(true);
+    try {
+      const ids = entradasSemFonte.map((t) => t.id);
+      const qtd = await bulkAssignIncomeSource(ids, fonteMassaId);
+      setModalMassaAberto(false);
+      await carregarLista();
+      aoAlterarDados();
+      const nomeSrc = dadosFonte(fonteMassaId)?.name || 'Fonte';
+      mostrarSnackbarComDesfazer(
+        `${qtd} entrada(s) sem fonte atribuída(s) para "${nomeSrc}"!`
+      );
+    } finally {
+      setSalvandoMassa(false);
+    }
+  };
 
   const totalPaginas = Math.max(1, Math.ceil(totalRegistros / PAGE_SIZE));
 
@@ -247,8 +291,8 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
             />
           </div>
 
-          {/* Chips de Tipo + Período */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 min-w-0">
+          {/* Chips de Tipo + Fonte + Conta + Categoria + Período */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 min-w-0">
             <select
               value={filtroTipo}
               onChange={(e) => {
@@ -261,6 +305,26 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
               <option value="income">Só Entradas</option>
               <option value="expense">Só Saídas</option>
               <option value="transfer">Só Transferências</option>
+            </select>
+
+            <select
+              value={filtroFonteId}
+              onChange={(e) => {
+                setFiltroFonteId(e.target.value);
+                setPagina(1);
+              }}
+              aria-label="Filtrar por fonte de renda"
+              className="min-h-[40px] px-2.5 bg-[#0B0B0D] border border-[#262630] rounded-xl text-xs text-white"
+            >
+              <option value="">Todas as fontes</option>
+              <option value="__none__">Sem fonte (antigos)</option>
+              {fontes.map((src) => (
+                <option key={src.id} value={src.id}>
+                  {src.name}
+                  {!src.counts_as_earning ? ' (Aporte)' : ''}
+                  {src.archived ? ' [Arq.]' : ''}
+                </option>
+              ))}
             </select>
 
             <select
@@ -301,7 +365,7 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
                 setFiltroPeriodo(e.target.value as PeriodoFiltro);
                 setPagina(1);
               }}
-              className="min-h-[40px] px-2.5 bg-[#0B0B0D] border border-[#262630] rounded-xl text-xs text-white"
+              className="col-span-2 sm:col-span-1 min-h-[40px] px-2.5 bg-[#0B0B0D] border border-[#262630] rounded-xl text-xs text-white"
             >
               <option value="todos">Todo o período</option>
               <option value="hoje">Hoje</option>
@@ -309,6 +373,26 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
               <option value="30dias">Últimos 30 dias</option>
             </select>
           </div>
+
+          {/* Aviso de edição em massa quando houver entradas "Sem fonte" */}
+          {!modoLixeira && entradasSemFonte.length > 0 && (
+            <div className="p-2.5 rounded-xl bg-[#FF7A1A]/10 border border-[#FF7A1A]/30 flex flex-wrap items-center justify-between gap-2 min-w-0">
+              <span className="text-xs text-[#F5F5F7] inline-flex items-center gap-1.5 min-w-0">
+                <Briefcase className="w-3.5 h-3.5 text-[#FF7A1A] shrink-0" />
+                <span className="truncate">
+                  Há <strong>{entradasSemFonte.length}</strong> entrada(s) antiga(s) marcada(s) como <strong>&ldquo;Sem fonte&rdquo;</strong>.
+                </span>
+              </span>
+              <Botao
+                type="button"
+                variante="secundario"
+                tamanho="sm"
+                icone={<CheckCheck className="w-3.5 h-3.5 text-[#FF7A1A]" />}
+                texto="Definir fonte em massa"
+                onClick={abrirModalMassa}
+              />
+            </div>
+          )}
         </div>
       </Card>
 
@@ -329,6 +413,8 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
         <div className="flex flex-col gap-2.5 min-w-0">
           {lancamentos.map((tx) => {
             const cat = dadosCategoria(tx.category_id);
+            const src = dadosFonte(tx.income_source_id);
+            const isAporte = tx.kind === 'income' && src && !src.counts_as_earning;
             const tituloPrincipal =
               tx.kind === 'income'
                 ? nomeForma(tx.payment_method_id)
@@ -349,11 +435,13 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
                       <div
                         className={[
                           'w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border',
-                          tx.kind === 'income'
-                            ? 'bg-[#2EE59D]/15 border-[#2EE59D]/40 text-[#2EE59D]'
-                            : tx.kind === 'expense'
-                              ? 'bg-[#FF3B30]/15 border-[#FF3B30]/40 text-[#FF3B30]'
-                              : 'bg-[#FFC940]/15 border-[#FFC940]/40 text-[#FFC940]',
+                          isAporte
+                            ? 'bg-[#06B6D4]/15 border-[#06B6D4]/40 text-[#06B6D4]'
+                            : tx.kind === 'income'
+                              ? 'bg-[#2EE59D]/15 border-[#2EE59D]/40 text-[#2EE59D]'
+                              : tx.kind === 'expense'
+                                ? 'bg-[#FF3B30]/15 border-[#FF3B30]/40 text-[#FF3B30]'
+                                : 'bg-[#FFC940]/15 border-[#FFC940]/40 text-[#FFC940]',
                         ].join(' ')}
                       >
                         {tx.kind === 'income' ? (
@@ -370,13 +458,38 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
                       </div>
 
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 min-w-0">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                           <span
                             className="text-xs sm:text-sm font-bold text-white truncate"
                             title={tituloPrincipal}
                           >
                             {tituloPrincipal}
                           </span>
+
+                          {src ? (
+                            <span
+                              style={{
+                                backgroundColor: `${src.color}20`,
+                                borderColor: `${src.color}55`,
+                                color: src.color,
+                              }}
+                              className="text-[10px] px-2 py-0.5 rounded-full border font-bold inline-flex items-center gap-1 max-w-[170px] truncate shrink-0"
+                              title={src.name}
+                            >
+                              <span className="truncate">{src.name}</span>
+                            </span>
+                          ) : tx.kind === 'income' ? (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-[#9A9AA6] font-semibold shrink-0">
+                              Sem fonte
+                            </span>
+                          ) : null}
+
+                          {isAporte && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#06B6D4]/20 text-[#06B6D4] border border-[#06B6D4]/40 font-extrabold shrink-0">
+                              APORTE
+                            </span>
+                          )}
+
                           {tx.batch_id && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#FF7A1A]/20 text-[#FF7A1A] font-bold shrink-0">
                               LOTE
@@ -488,6 +601,52 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
           />
         </div>
       )}
+
+      {/* Modal de edição em massa para atribuir fonte aos lançamentos "Sem fonte" */}
+      <Modal
+        aberto={modalMassaAberto}
+        aoFechar={() => setModalMassaAberto(false)}
+        titulo="Definir Fonte em Massa"
+      >
+        <div className="space-y-4 min-w-0">
+          <p className="text-xs sm:text-sm text-[#9A9AA6] leading-relaxed">
+            Escolha qual fonte de renda deseja aplicar às{' '}
+            <strong className="text-white">{entradasSemFonte.length}</strong>{' '}
+            entrada(s) listada(s) que estão como &ldquo;Sem fonte&rdquo;:
+          </p>
+
+          <select
+            value={fonteMassaId}
+            onChange={(e) => setFonteMassaId(e.target.value)}
+            className="w-full min-h-[46px] px-3.5 bg-[#0B0B0D] border border-[#262630] rounded-xl text-sm text-white"
+          >
+            {fontesAtivas.map((src) => (
+              <option key={src.id} value={src.id}>
+                {src.name}
+                {!src.counts_as_earning ? ' (Aporte)' : ''}
+              </option>
+            ))}
+          </select>
+
+          <div className="flex gap-2">
+            <Botao
+              type="button"
+              variante="secundario"
+              larguraTotal
+              texto="Cancelar"
+              onClick={() => setModalMassaAberto(false)}
+            />
+            <Botao
+              type="button"
+              variante="primario"
+              larguraTotal
+              carregando={salvandoMassa}
+              texto="Aplicar a Todas"
+              onClick={aplicarFonteEmMassa}
+            />
+          </div>
+        </div>
+      </Modal>
 
       {/* Modal de confirmação antes de excluir (PRD 4.5) */}
       <Modal

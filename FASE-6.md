@@ -28,6 +28,9 @@ Deixar o BETA estável, rápido, instalável e pronto para virar APK.
 - [ ] Revisão de RLS: usuário A × B isolados; usuário comum × admin
 - [ ] Exportar dados funciona
 - [ ] Nenhum texto vaza em 320–430 px
+- [ ] Layout de celular idêntico ao aprovado (diferença zero abaixo de 1024 px) e layout de computador/TV correto em 1024/1280/1440/1920
+- [ ] Regressão visual completa em 320, 360, 412, 768, 1023 (celular) e 1024, 1280, 1440, 1920 (computador/TV); Lighthouse também em modo desktop
+- [ ] O APK usará SOMENTE o layout de celular (confirmar no `APK-PLANO.md`)
 - [ ] `APK-PLANO.md` criado e `DIARIO.md` finalizado
 
 ## Aprovação

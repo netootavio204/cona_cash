@@ -14,9 +14,10 @@ app/dist/
 .vercel/
 app/.vercel/
 
-# Arquivos pesados de edição / sistema
+# Arquivos pesados de edição / sistema / backups locais
 *.psd
 *.tsbuildinfo
 .DS_Store
 Thumbs.db
 *.log
+supabase/backup_*.json
