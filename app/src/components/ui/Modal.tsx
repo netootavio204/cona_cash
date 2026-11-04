@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 
@@ -15,6 +15,17 @@ export const Modal: React.FC<ModalProps> = ({
   titulo,
   children,
 }) => {
+  useEffect(() => {
+    if (!aberto) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        aoFechar();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [aberto, aoFechar]);
+
   return (
     <AnimatePresence>
       {aberto && (
@@ -29,7 +40,7 @@ export const Modal: React.FC<ModalProps> = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ duration: 0.18 }}
-            className="w-full max-w-md min-w-0 bg-[#141418] border border-[#262630] rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+            className="w-full max-w-md lg:max-w-[560px] min-[1920px]:max-w-[640px] min-w-0 bg-[#141418] border border-[#262630] rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
           >
             <div className="flex items-center justify-between gap-2 px-4 py-3.5 border-b border-[#262630] min-w-0">
               <h2

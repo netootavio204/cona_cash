@@ -62,7 +62,7 @@ export async function fetchAppSettings(): Promise<AppSettings> {
       id: 1,
       signup_open: true,
       schema_version: '003b_income_sources',
-      app_version: 'v0.3.1 beta',
+      app_version: 'v0.3.2 beta',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };

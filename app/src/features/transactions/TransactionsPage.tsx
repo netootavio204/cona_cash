@@ -222,8 +222,8 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
 
   return (
     <div className="flex flex-col gap-4 min-w-0">
-      {/* Barra de Ações Rápidas */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 min-w-0">
+      {/* Barra de Ações Rápidas (mobile/tablet; no desktop fica na barra superior) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 min-w-0 lg:hidden">
         <Botao
           variante="primario"
           tamanho="sm"
@@ -292,7 +292,7 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
           </div>
 
           {/* Chips de Tipo + Fonte + Conta + Categoria + Período */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 min-w-0">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 min-w-0">
             <select
               value={filtroTipo}
               onChange={(e) => {
@@ -410,171 +410,369 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
           </p>
         </Card>
       ) : (
-        <div className="flex flex-col gap-2.5 min-w-0">
-          {lancamentos.map((tx) => {
-            const cat = dadosCategoria(tx.category_id);
-            const src = dadosFonte(tx.income_source_id);
-            const isAporte = tx.kind === 'income' && src && !src.counts_as_earning;
-            const tituloPrincipal =
-              tx.kind === 'income'
-                ? nomeForma(tx.payment_method_id)
-                : tx.kind === 'expense'
-                  ? cat?.name || 'Saída'
-                  : 'Transferência';
+        <>
+          {/* Lista em cards para Mobile/Tablet (< 1024 px) — INTACTA */}
+          <div className="flex flex-col gap-2.5 min-w-0 lg:hidden">
+            {lancamentos.map((tx) => {
+              const cat = dadosCategoria(tx.category_id);
+              const src = dadosFonte(tx.income_source_id);
+              const isAporte = tx.kind === 'income' && src && !src.counts_as_earning;
+              const tituloPrincipal =
+                tx.kind === 'income'
+                  ? nomeForma(tx.payment_method_id)
+                  : tx.kind === 'expense'
+                    ? cat?.name || 'Saída'
+                    : 'Transferência';
 
-            const subtituloConta =
-              tx.kind === 'transfer'
-                ? `${nomeConta(tx.account_id)} → ${nomeConta(tx.to_account_id)}`
-                : nomeConta(tx.account_id);
+              const subtituloConta =
+                tx.kind === 'transfer'
+                  ? `${nomeConta(tx.account_id)} → ${nomeConta(tx.to_account_id)}`
+                  : nomeConta(tx.account_id);
 
-            return (
-              <Card key={tx.id} padding="sm">
-                <div className="flex flex-col gap-2.5 min-w-0">
-                  <div className="flex items-start justify-between gap-2 min-w-0">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div
-                        className={[
-                          'w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border',
-                          isAporte
-                            ? 'bg-[#06B6D4]/15 border-[#06B6D4]/40 text-[#06B6D4]'
-                            : tx.kind === 'income'
-                              ? 'bg-[#2EE59D]/15 border-[#2EE59D]/40 text-[#2EE59D]'
-                              : tx.kind === 'expense'
-                                ? 'bg-[#FF3B30]/15 border-[#FF3B30]/40 text-[#FF3B30]'
-                                : 'bg-[#FFC940]/15 border-[#FFC940]/40 text-[#FFC940]',
-                        ].join(' ')}
-                      >
-                        {tx.kind === 'income' ? (
-                          <ArrowDownLeft className="w-5 h-5" />
-                        ) : tx.kind === 'expense' ? (
-                          cat ? (
-                            <CategoryIcon name={cat.icon} className="w-5 h-5" />
+              return (
+                <Card key={tx.id} padding="sm">
+                  <div className="flex flex-col gap-2.5 min-w-0">
+                    <div className="flex items-start justify-between gap-2 min-w-0">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div
+                          className={[
+                            'w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border',
+                            isAporte
+                              ? 'bg-[#06B6D4]/15 border-[#06B6D4]/40 text-[#06B6D4]'
+                              : tx.kind === 'income'
+                                ? 'bg-[#2EE59D]/15 border-[#2EE59D]/40 text-[#2EE59D]'
+                                : tx.kind === 'expense'
+                                  ? 'bg-[#FF3B30]/15 border-[#FF3B30]/40 text-[#FF3B30]'
+                                  : 'bg-[#FFC940]/15 border-[#FFC940]/40 text-[#FFC940]',
+                          ].join(' ')}
+                        >
+                          {tx.kind === 'income' ? (
+                            <ArrowDownLeft className="w-5 h-5" />
+                          ) : tx.kind === 'expense' ? (
+                            cat ? (
+                              <CategoryIcon name={cat.icon} className="w-5 h-5" />
+                            ) : (
+                              <ArrowUpRight className="w-5 h-5" />
+                            )
                           ) : (
-                            <ArrowUpRight className="w-5 h-5" />
-                          )
-                        ) : (
-                          <ArrowRightLeft className="w-5 h-5" />
-                        )}
-                      </div>
-
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-                          <span
-                            className="text-xs sm:text-sm font-bold text-white truncate"
-                            title={tituloPrincipal}
-                          >
-                            {tituloPrincipal}
-                          </span>
-
-                          {src ? (
-                            <span
-                              style={{
-                                backgroundColor: `${src.color}20`,
-                                borderColor: `${src.color}55`,
-                                color: src.color,
-                              }}
-                              className="text-[10px] px-2 py-0.5 rounded-full border font-bold inline-flex items-center gap-1 max-w-[170px] truncate shrink-0"
-                              title={src.name}
-                            >
-                              <span className="truncate">{src.name}</span>
-                            </span>
-                          ) : tx.kind === 'income' ? (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-[#9A9AA6] font-semibold shrink-0">
-                              Sem fonte
-                            </span>
-                          ) : null}
-
-                          {isAporte && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#06B6D4]/20 text-[#06B6D4] border border-[#06B6D4]/40 font-extrabold shrink-0">
-                              APORTE
-                            </span>
-                          )}
-
-                          {tx.batch_id && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#FF7A1A]/20 text-[#FF7A1A] font-bold shrink-0">
-                              LOTE
-                            </span>
+                            <ArrowRightLeft className="w-5 h-5" />
                           )}
                         </div>
-                        <p
-                          className="text-xs text-[#9A9AA6] truncate"
-                          title={subtituloConta}
-                        >
-                          {subtituloConta} • {formatDateTimeBR(tx.occurred_at)}
-                        </p>
-                        {tx.note && (
+
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                            <span
+                              className="text-xs sm:text-sm font-bold text-white truncate"
+                              title={tituloPrincipal}
+                            >
+                              {tituloPrincipal}
+                            </span>
+
+                            {src ? (
+                              <span
+                                style={{
+                                  backgroundColor: `${src.color}20`,
+                                  borderColor: `${src.color}55`,
+                                  color: src.color,
+                                }}
+                                className="text-[10px] px-2 py-0.5 rounded-full border font-bold inline-flex items-center gap-1 max-w-[170px] truncate shrink-0"
+                                title={src.name}
+                              >
+                                <span className="truncate">{src.name}</span>
+                              </span>
+                            ) : tx.kind === 'income' ? (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-[#9A9AA6] font-semibold shrink-0">
+                                Sem fonte
+                              </span>
+                            ) : null}
+
+                            {isAporte && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#06B6D4]/20 text-[#06B6D4] border border-[#06B6D4]/40 font-extrabold shrink-0">
+                                APORTE
+                              </span>
+                            )}
+
+                            {tx.batch_id && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#FF7A1A]/20 text-[#FF7A1A] font-bold shrink-0">
+                                LOTE
+                              </span>
+                            )}
+                          </div>
                           <p
-                            className="text-xs text-[#F5F5F7]/90 truncate mt-0.5"
-                            title={tx.note}
+                            className="text-xs text-[#9A9AA6] truncate"
+                            title={subtituloConta}
                           >
-                            {tx.note}
+                            {subtituloConta} • {formatDateTimeBR(tx.occurred_at)}
                           </p>
+                          {tx.note && (
+                            <p
+                              className="text-xs text-[#F5F5F7]/90 truncate mt-0.5"
+                              title={tx.note}
+                            >
+                              {tx.note}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <ValorMoeda
+                          centavos={tx.net_cents}
+                          tamanho="md"
+                          cor={
+                            tx.kind === 'income'
+                              ? 'positivo'
+                              : tx.kind === 'expense'
+                                ? 'negativo'
+                                : 'destaque'
+                          }
+                        />
+                        {tx.kind === 'income' && tx.fee_cents > 0 && (
+                          <span className="text-[10px] text-[#9A9AA6] block tabular-nums">
+                            Bruto {formatCentsToBRL(tx.gross_cents)} (−
+                            {formatCentsToBRL(tx.fee_cents)})
+                          </span>
                         )}
                       </div>
                     </div>
 
-                    <div className="text-right shrink-0">
-                      <ValorMoeda
-                        centavos={tx.net_cents}
-                        tamanho="md"
-                        cor={
-                          tx.kind === 'income'
-                            ? 'positivo'
-                            : tx.kind === 'expense'
-                              ? 'negativo'
-                              : 'destaque'
-                        }
+                    {/* Ações do lançamento */}
+                    <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-[#262630]/60">
+                      <Botao
+                        variante="fantasma"
+                        tamanho="sm"
+                        icone={<History className="w-3.5 h-3.5" />}
+                        texto="Histórico"
+                        onClick={() => abrirHistoricoLancamento(tx)}
                       />
-                      {tx.kind === 'income' && tx.fee_cents > 0 && (
-                        <span className="text-[10px] text-[#9A9AA6] block tabular-nums">
-                          Bruto {formatCentsToBRL(tx.gross_cents)} (−
-                          {formatCentsToBRL(tx.fee_cents)})
-                        </span>
+                      {!modoLixeira ? (
+                        <>
+                          <Botao
+                            variante="secundario"
+                            tamanho="sm"
+                            icone={<Pencil className="w-3.5 h-3.5" />}
+                            texto="Editar"
+                            onClick={() => abrirEditarLancamento(tx)}
+                          />
+                          <Botao
+                            variante="perigo"
+                            tamanho="sm"
+                            icone={<Trash2 className="w-3.5 h-3.5" />}
+                            texto="Excluir"
+                            onClick={() => setTxParaExcluir(tx)}
+                          />
+                        </>
+                      ) : (
+                        <Botao
+                          variante="sucesso"
+                          tamanho="sm"
+                          icone={<RotateCcw className="w-3.5 h-3.5" />}
+                          texto="Restaurar"
+                          onClick={() => restaurarDaLixeira(tx)}
+                        />
                       )}
                     </div>
                   </div>
+                </Card>
+              );
+            })}
+          </div>
 
-                  {/* Ações do lançamento */}
-                  <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-[#262630]/60">
-                    <Botao
-                      variante="fantasma"
-                      tamanho="sm"
-                      icone={<History className="w-3.5 h-3.5" />}
-                      texto="Histórico"
-                      onClick={() => abrirHistoricoLancamento(tx)}
-                    />
-                    {!modoLixeira ? (
-                      <>
-                        <Botao
-                          variante="secundario"
-                          tamanho="sm"
-                          icone={<Pencil className="w-3.5 h-3.5" />}
-                          texto="Editar"
-                          onClick={() => abrirEditarLancamento(tx)}
-                        />
-                        <Botao
-                          variante="perigo"
-                          tamanho="sm"
-                          icone={<Trash2 className="w-3.5 h-3.5" />}
-                          texto="Excluir"
-                          onClick={() => setTxParaExcluir(tx)}
-                        />
-                      </>
-                    ) : (
-                      <Botao
-                        variante="sucesso"
-                        tamanho="sm"
-                        icone={<RotateCcw className="w-3.5 h-3.5" />}
-                        texto="Restaurar"
-                        onClick={() => restaurarDaLixeira(tx)}
-                      />
-                    )}
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
+          {/* Tabela para Desktop/TV (>= 1024 px — Fase 3C item 5) */}
+          <div className="hidden lg:block min-w-0">
+            <Card padding="none">
+              <div className="w-full min-w-0">
+                <table className="w-full table-fixed border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-[#262630] bg-[#0B0B0D]/60 text-[11px] font-bold uppercase tracking-wider text-[#9A9AA6]">
+                      <th className="w-[14%] px-3.5 py-3">Data / Hora</th>
+                      <th className="w-[19%] px-3 py-3">Fonte / Tipo</th>
+                      <th className="w-[17%] px-3 py-3">Forma / Conta</th>
+                      <th className="w-[14%] px-3 py-3">Categoria</th>
+                      <th className="w-[14%] px-3 py-3">Observação</th>
+                      <th className="w-[12%] px-3 py-3 text-right">Valor Líquido</th>
+                      <th className="w-[10%] px-3.5 py-3 text-right">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#262630]/60 text-xs">
+                    {lancamentos.map((tx) => {
+                      const cat = dadosCategoria(tx.category_id);
+                      const src = dadosFonte(tx.income_source_id);
+                      const isAporte =
+                        tx.kind === 'income' && src && !src.counts_as_earning;
+                      const textoFormaOuTransf =
+                        tx.kind === 'income'
+                          ? `${nomeForma(tx.payment_method_id)} → ${nomeConta(tx.account_id)}`
+                          : tx.kind === 'expense'
+                            ? nomeConta(tx.account_id)
+                            : `${nomeConta(tx.account_id)} → ${nomeConta(tx.to_account_id)}`;
+
+                      return (
+                        <tr
+                          key={tx.id}
+                          className="hover:bg-white/[0.03] transition-colors"
+                        >
+                          <td
+                            className="px-3.5 py-3 text-[#9A9AA6] tabular-nums truncate"
+                            title={formatDateTimeBR(tx.occurred_at)}
+                          >
+                            {formatDateTimeBR(tx.occurred_at)}
+                          </td>
+
+                          <td className="px-3 py-3 min-w-0">
+                            <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                              {src ? (
+                                <span
+                                  style={{
+                                    backgroundColor: `${src.color}20`,
+                                    borderColor: `${src.color}55`,
+                                    color: src.color,
+                                  }}
+                                  className="text-[11px] px-2 py-0.5 rounded-full border font-bold inline-flex items-center gap-1 max-w-full truncate"
+                                  title={src.name}
+                                >
+                                  <span className="truncate">{src.name}</span>
+                                </span>
+                              ) : tx.kind === 'income' ? (
+                                <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/10 text-[#9A9AA6] font-semibold">
+                                  Sem fonte
+                                </span>
+                              ) : tx.kind === 'expense' ? (
+                                <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#FF3B30]/15 text-[#FF3B30] font-semibold">
+                                  Saída
+                                </span>
+                              ) : (
+                                <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#FFC940]/15 text-[#FFC940] font-semibold">
+                                  Transferência
+                                </span>
+                              )}
+
+                              {isAporte && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#06B6D4]/20 text-[#06B6D4] border border-[#06B6D4]/40 font-extrabold shrink-0">
+                                  APORTE
+                                </span>
+                              )}
+
+                              {tx.batch_id && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#FF7A1A]/20 text-[#FF7A1A] font-bold shrink-0">
+                                  LOTE
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          <td
+                            className="px-3 py-3 text-white font-semibold truncate"
+                            title={textoFormaOuTransf}
+                          >
+                            {textoFormaOuTransf}
+                          </td>
+
+                          <td className="px-3 py-3 min-w-0">
+                            {cat ? (
+                              <span
+                                className="inline-flex items-center gap-1.5 text-white truncate max-w-full"
+                                title={cat.name}
+                              >
+                                <span
+                                  style={{
+                                    backgroundColor: `${cat.color}20`,
+                                    color: cat.color,
+                                  }}
+                                  className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
+                                >
+                                  <CategoryIcon
+                                    name={cat.icon}
+                                    className="w-3.5 h-3.5"
+                                  />
+                                </span>
+                                <span className="truncate">{cat.name}</span>
+                              </span>
+                            ) : (
+                              <span className="text-[#9A9AA6]">—</span>
+                            )}
+                          </td>
+
+                          <td
+                            className="px-3 py-3 text-[#F5F5F7]/85 truncate"
+                            title={tx.note || ''}
+                          >
+                            {tx.note || <span className="text-[#9A9AA6]/50">—</span>}
+                          </td>
+
+                          <td className="px-3 py-3 text-right">
+                            <ValorMoeda
+                              centavos={tx.net_cents}
+                              tamanho="sm"
+                              cor={
+                                tx.kind === 'income'
+                                  ? 'positivo'
+                                  : tx.kind === 'expense'
+                                    ? 'negativo'
+                                    : 'destaque'
+                              }
+                            />
+                            {tx.kind === 'income' && tx.fee_cents > 0 && (
+                              <span className="text-[10px] text-[#9A9AA6] block tabular-nums truncate">
+                                Bruto {formatCentsToBRL(tx.gross_cents)}
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="px-3.5 py-3 text-right">
+                            <div className="inline-flex items-center justify-end gap-1">
+                              <button
+                                type="button"
+                                onClick={() => abrirHistoricoLancamento(tx)}
+                                title="Histórico de auditoria"
+                                aria-label="Histórico de auditoria"
+                                className="p-1.5 rounded-lg text-[#9A9AA6] hover:text-white hover:bg-white/5"
+                              >
+                                <History className="w-4 h-4" />
+                              </button>
+                              {!modoLixeira ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => abrirEditarLancamento(tx)}
+                                    title="Editar lançamento"
+                                    aria-label="Editar lançamento"
+                                    className="p-1.5 rounded-lg text-[#9A9AA6] hover:text-white hover:bg-white/5"
+                                  >
+                                    <Pencil className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setTxParaExcluir(tx)}
+                                    title="Mover para a Lixeira"
+                                    aria-label="Mover para a Lixeira"
+                                    className="p-1.5 rounded-lg text-[#9A9AA6] hover:text-[#FF3B30] hover:bg-[#FF3B30]/10"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => restaurarDaLixeira(tx)}
+                                  title="Restaurar da Lixeira"
+                                  aria-label="Restaurar da Lixeira"
+                                  className="p-1.5 rounded-lg text-[#2EE59D] hover:bg-[#2EE59D]/10"
+                                >
+                                  <RotateCcw className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </div>
+        </>
       )}
 
       {/* Paginação (50 por página) */}

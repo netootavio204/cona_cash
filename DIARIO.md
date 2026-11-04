@@ -3,12 +3,12 @@
 > O agente DEVE atualizar este arquivo. Ao retomar, leia primeiro "ESTADO ATUAL".
 
 ## ESTADO ATUAL
-- Fase atual: **FASE 3B — Fontes de renda e aportes (Concluída — aguardando "APROVADO")**
-- Último passo concluído: Migration `003b_income_sources.sql` aplicada no Supabase (2x idempotente), telas de Fontes/Aportes/Sugestões 3D/Tags Rápidas/Filtro por fonte/Edição em massa implementadas, testes de regressão e RLS 100% aprovados
-- Próximo passo: Após o **"APROVADO"** do Octavio na Fase 3B, iniciar a Entrevista da **Fase 3C** (Layout de Computador/TV com menu lateral fixo `≥ 1024px`)
-- Versão do app: `v0.3.1 beta` (`schema_version = 003b_income_sources`)
+- Fase atual: **FASE 3C — Layout de computador/notebook/TV (Entrevista em andamento)**
+- Último passo concluído: Fase 3B (`v0.3.1 beta`) aprovada pelo Octavio
+- Próximo passo: Concluir a entrevista da Fase 3C, capturar imagens "ANTES" de celular/tablet (320/360/412/768/1023 px) e implementar o menu lateral e layout desktop/TV (`≥ 1024px`) sem alterar 1 pixel do celular
+- Versão do app: `v0.3.1 beta` (indo para `v0.3.2 beta`)
 - Último commit/deploy: sincronizado no GitHub (`origin/main`)
-- Aguardando aprovação do Octavio? **SIM** — aguardando `"APROVADO"` da Fase 3B
+- Aguardando aprovação do Octavio? Aguardando respostas da Entrevista da Fase 3C
 
 ## PROGRESSO DAS FASES
 | Fase | Nome | Status | Aprovada em |
@@ -16,8 +16,8 @@
 | 1 | Fundação, login e visual | ✅ aprovada | 2026-11-03 |
 | 2 | Configurações e área admin | ✅ aprovada | 2026-11-03 |
 | 3 | Lançamentos (entrada, saída, transferência) | ✅ aprovada | 2026-11-04 |
-| 3B | Fontes de renda e aportes (v1.1) | ⏳ aguardando aprovação | — |
-| 3C | Layout de computador/TV (v1.1) | ⬜ | — |
+| 3B | Fontes de renda e aportes (v1.1) | ✅ aprovada | 2026-11-04 |
+| 3C | Layout de computador/TV (v1.1) | 🔨 em construção | — |
 | 4 | Dashboard, saldos e relatórios + PDF | ⬜ | — |
 | 5 | Metas, efeitos visuais e sons | ⬜ | — |
 | 6 | PWA, otimização, testes e preparo do APK | ⬜ | — |
@@ -44,6 +44,11 @@ Saldo Inicial configurado para o teste: **Conta 1 = R$ 100,00** | Conta 2 = R$ 0
   - **Saldo Total Geral**: `R$ 371,51` (37.151 centavos) — **BATEU 100%**
 
 ## DECISÕES TOMADAS (respostas das entrevistas)
+- `2026-11-04 — Fase 3C — Ponto de virada (breakpoint)`: `≥ 1024 px` (`lg:`) ativa menu lateral e layout de computador; `< 1024 px` mantém 100% o layout de celular com barra inferior.
+- `2026-11-04 — Fase 3C — Menu lateral`: Aberto por padrão (240 px), com botão para recolher (72 px só ícones) salvando preferência no `localStorage`.
+- `2026-11-04 — Fase 3C — Uso na TV (≥ 1920 px)`: Visualização à distância + navegação completa por teclado/controle (`Tab`, setas, `Enter` e foco laranja bem destacado, sem depender de hover).
+- `2026-11-04 — Fase 3C — Perfil, versão e Sair no desktop`: No rodapé do menu lateral.
+- `2026-11-04 — Fase 3C — Atalhos de teclado`: Ativados no desktop quando fora de campos de texto (`N` = Nova Entrada, `S` = Nova Saída, `T` = Transferir, `L` = Lote do dia).
 - `2026-11-04 — Fase 3B — Fontes de renda iniciais`: Lista padrão da v1.1 (*Corridas (99)*, *Venda 3D — Mercado Livre*, *Venda 3D — Presencial*, *Venda 3D — Bares e mercados*, *Outros ganhos*, *Aporte*).
 - `2026-11-04 — Fase 3B — Contas sugeridas`: Mercado Livre → Conta 1; Bares/Mercados → Conta 2; Presencial/Outros → Conta 3; Aporte/Dinheiro → Bolso (todas editáveis na tela).
 - `2026-11-04 — Fase 3B — Lançamentos antigos`: Manter como "Sem fonte" com opção de atribuir fonte depois.

@@ -4,11 +4,12 @@ export interface CardProps {
   children: React.ReactNode;
   bordaAnimada?: boolean;
   className?: string;
-  padding?: 'sm' | 'md' | 'lg';
+  padding?: 'none' | 'sm' | 'md' | 'lg';
   onClick?: () => void;
 }
 
 const paddingClasses = {
+  none: 'p-0',
   sm: 'p-3.5',
   md: 'p-4 sm:p-5',
   lg: 'p-5 sm:p-6',

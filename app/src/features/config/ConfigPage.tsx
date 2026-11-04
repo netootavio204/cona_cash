@@ -78,7 +78,7 @@ import {
 } from '../../components/ui/CategoryIcon';
 import { APP_NAME, APP_VERSION } from '../../config/version';
 
-type SecaoConfig =
+export type SecaoConfig =
   | 'contas'
   | 'fontes'
   | 'formas'
@@ -89,17 +89,32 @@ type SecaoConfig =
 export interface ConfigPageProps {
   onShowToast: (texto: string, tipo?: 'sucesso' | 'erro' | 'info') => void;
   onAccountsChanged?: () => void;
+  secaoForcada?: SecaoConfig | null;
+  aoConsumirSecaoForcada?: () => void;
 }
 
 export const ConfigPage: React.FC<ConfigPageProps> = ({
   onShowToast,
   onAccountsChanged,
+  secaoForcada,
+  aoConsumirSecaoForcada,
 }) => {
   const { perfil, usuario, configApp, recarregarPerfilEConfig } = useAuth();
   const isAdmin = perfil?.role === 'admin' && perfil?.status === 'approved';
 
   const [secao, setSecao] = useState<SecaoConfig>('contas');
   const [carregandoDados, setCarregandoDados] = useState(true);
+
+  useEffect(() => {
+    if (secaoForcada) {
+      if (secaoForcada === 'admin' && !isAdmin) {
+        setSecao('contas');
+      } else {
+        setSecao(secaoForcada);
+      }
+      aoConsumirSecaoForcada?.();
+    }
+  }, [secaoForcada, isAdmin, aoConsumirSecaoForcada]);
 
   const [contas, setContas] = useState<Account[]>([]);
   const [fontes, setFontes] = useState<IncomeSource[]>([]);
@@ -756,7 +771,12 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
   return (
     <div className="flex flex-col gap-4 min-w-0">
       {/* Abas superiores da área de Configurações */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 bg-[#141418] p-1.5 rounded-2xl border border-[#262630] min-w-0">
+      <div
+        className={[
+          'grid grid-cols-2 sm:grid-cols-3 gap-1.5 bg-[#141418] p-1.5 rounded-2xl border border-[#262630] min-w-0',
+          isAdmin ? 'lg:grid-cols-6' : 'lg:grid-cols-5',
+        ].join(' ')}
+      >
         <button
           type="button"
           onClick={() => setSecao('contas')}
@@ -915,7 +935,7 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
           SEÇÃO 1: CONTAS
       ==================================================================== */}
       {secao === 'contas' && (
-        <div className="flex flex-col gap-2.5 min-w-0">
+        <div className="flex flex-col gap-2.5 lg:grid lg:grid-cols-2 lg:gap-3 min-w-0">
           {carregandoDados ? (
             <Card>
               <p className="text-xs text-[#9A9AA6]">Carregando suas contas...</p>
@@ -1014,8 +1034,8 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
           SEÇÃO 1B: FONTES DE RENDA E APORTES (Fase 3B)
       ==================================================================== */}
       {secao === 'fontes' && (
-        <div className="flex flex-col gap-2.5 min-w-0">
-          <p className="text-xs text-[#9A9AA6] px-1">
+        <div className="flex flex-col gap-2.5 lg:grid lg:grid-cols-2 lg:gap-3 min-w-0">
+          <p className="text-xs text-[#9A9AA6] px-1 lg:col-span-2">
             Gerencie suas fontes de renda (corridas, vendas 3D, etc.) e aportes. Quando uma fonte está marcada como{' '}
             <strong className="text-[#06B6D4]">Aporte</strong>, o dinheiro entra no saldo da conta mas não infla os totais de ganho.
           </p>
@@ -1131,7 +1151,7 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
           SEÇÃO 2: FORMAS DE PAGAMENTO E TAXAS
       ==================================================================== */}
       {secao === 'formas' && (
-        <div className="flex flex-col gap-2.5 min-w-0">
+        <div className="flex flex-col gap-2.5 lg:grid lg:grid-cols-2 lg:gap-3 min-w-0">
           {carregandoDados ? (
             <Card>
               <p className="text-xs text-[#9A9AA6]">
@@ -1223,7 +1243,7 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
           SEÇÃO 3: CATEGORIAS DE SAÍDA
       ==================================================================== */}
       {secao === 'categorias' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 min-w-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 min-w-0">
           {carregandoDados ? (
             <Card>
               <p className="text-xs text-[#9A9AA6]">Carregando categorias...</p>
@@ -1305,7 +1325,7 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
           SEÇÃO 4: PREFERÊNCIAS DO USUÁRIO + ALTERAR SENHA
       ==================================================================== */}
       {secao === 'preferencias' && (
-        <div className="flex flex-col gap-4 min-w-0">
+        <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start min-w-0">
           <Card bordaAnimada padding="lg">
             <form
               onSubmit={salvarPreferencias}

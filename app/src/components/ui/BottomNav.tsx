@@ -24,7 +24,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ abaAtiva, aoTrocarAba }) =
   return (
     <nav
       aria-label="Navegação principal"
-      className="fixed bottom-0 left-0 right-0 z-40 bg-[#0B0B0D]/90 backdrop-blur-xl border-t border-[#262630]"
+      className="fixed bottom-0 left-0 right-0 z-40 bg-[#0B0B0D]/90 backdrop-blur-xl border-t border-[#262630] lg:hidden"
     >
       <div className="max-w-2xl mx-auto grid grid-cols-5 px-1 py-1">
         {itens.map((item) => {
