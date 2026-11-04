@@ -24,6 +24,7 @@ import {
   fetchIncomeSources,
   fetchPaymentMethods,
   fetchTransactions,
+  fetchFinancialReport,
 } from '../../api/supabase';
 import type {
   Account,
@@ -46,6 +47,10 @@ import { BottomNav, type AbaNavegacao } from '../../components/ui/BottomNav';
 import { Sidebar } from '../../components/ui/Sidebar';
 import { Snackbar, type SnackbarMensagem } from '../../components/ui/Snackbar';
 import { ConfigPage, type SecaoConfig } from '../config/ConfigPage';
+import { ReportsPage } from '../reports/ReportsPage';
+import { MiniBarChart } from '../../components/ui/MiniBarChart';
+import { DonutChart } from '../../components/ui/DonutChart';
+import type { FinancialReportData } from '../../types/database';
 import { TransactionsPage } from '../transactions/TransactionsPage';
 import {
   AuditHistoryModal,
@@ -94,6 +99,7 @@ export const HomePage: React.FC = () => {
   });
   const [carregandoDados, setCarregandoDados] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [relatorio7Dias, setRelatorio7Dias] = useState<FinancialReportData | null>(null);
 
   // Modais de Lançamento / Lote / Histórico
   const [modalLancamentoAberto, setModalLancamentoAberto] = useState(false);
@@ -155,7 +161,12 @@ export const HomePage: React.FC = () => {
       await ensureMyDefaults();
       const { startISO, endISO } = getTodaySaoPauloBoundsISO();
 
-      const [balances, accs, srcs, pms, cats, recentTx, todayTx] =
+      const agora = new Date();
+      const seteDiasAtras = new Date(agora.getTime() - 6 * 24 * 60 * 60 * 1000);
+      const start7 = seteDiasAtras.toISOString().slice(0, 10);
+      const end7 = agora.toISOString().slice(0, 10);
+
+      const [balances, accs, srcs, pms, cats, recentTx, todayTx, rep7] =
         await Promise.all([
           fetchAccountBalances(),
           fetchAccounts(),
@@ -169,7 +180,12 @@ export const HomePage: React.FC = () => {
             startDateISO: startISO,
             endDateISO: endISO,
           }),
+          fetchFinancialReport({ startDateISO: start7, endDateISO: end7 }).catch(() => null),
         ]);
+
+      if (rep7) {
+        setRelatorio7Dias(rep7);
+      }
 
       setSaldosContas(balances.filter((b) => !b.archived));
       setContas(accs);
@@ -499,6 +515,75 @@ export const HomePage: React.FC = () => {
                   />
                 </div>
 
+                {/* BLOCOS DA FASE 4: GANHOS POR DIA & LUCRO POR FONTE */}
+                {relatorio7Dias && (
+                  <div className="space-y-4 min-w-0">
+                    {/* Gráfico de Evolução 7 Dias */}
+                    <Card padding="md">
+                      <div className="flex items-center justify-between gap-2 mb-2 min-w-0">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-[#9A9AA6] truncate">
+                          Ganhos nos Últimos 7 Dias
+                        </h3>
+                        <span className="text-[10px] text-[#2EE59D] font-bold">
+                          R$ {(relatorio7Dias.totals.net_earnings_cents / 100).toFixed(2)}
+                        </span>
+                      </div>
+                      <MiniBarChart
+                        data={relatorio7Dias.daily.map((d) => ({
+                          label: d.day.slice(8, 10) + '/' + d.day.slice(5, 7),
+                          valueCents: d.earnings_net_cents,
+                          secondaryCents: d.expenses_cents,
+                        }))}
+                        height={110}
+                      />
+                    </Card>
+
+                    {/* Resumo e Lucro por Fonte */}
+                    {relatorio7Dias.by_source.length > 0 && (
+                      <Card padding="md">
+                        <div className="flex items-center justify-between gap-2 mb-2 min-w-0">
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-[#9A9AA6] truncate">
+                            Lucro por Fonte (7 dias)
+                          </h3>
+                          <button
+                            type="button"
+                            onClick={() => setAba('relatorios')}
+                            className="text-xs text-[#FF7A1A] font-semibold hover:underline"
+                          >
+                            Ver detalhes
+                          </button>
+                        </div>
+                        <div className="flex flex-col gap-1.5 min-w-0">
+                          {relatorio7Dias.by_source.slice(0, 4).map((s) => (
+                            <div
+                              key={s.source_id}
+                              className="flex items-center justify-between gap-2 py-1 border-b border-[#262630]/40 last:border-0 min-w-0"
+                            >
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span
+                                  style={{ backgroundColor: s.source_color }}
+                                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                                />
+                                <span className="text-xs text-white truncate max-w-[130px]">
+                                  {s.source_name}
+                                </span>
+                              </div>
+                              <span
+                                className={[
+                                  'text-xs font-bold tabular-nums shrink-0',
+                                  s.profit_cents >= 0 ? 'text-[#2EE59D]' : 'text-[#FF3B30]',
+                                ].join(' ')}
+                              >
+                                R$ {(s.profit_cents / 100).toFixed(2)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </Card>
+                    )}
+                  </div>
+                )}
+
                 {/* Cards de Saldo por Conta */}
                 <div className="space-y-2.5 min-w-0">
                   <div className="flex items-center justify-between gap-2 px-1 min-w-0">
@@ -731,12 +816,15 @@ export const HomePage: React.FC = () => {
             />
           )}
 
-          {(aba === 'relatorios' || aba === 'metas') && (
+          {aba === 'relatorios' && (
+            <ReportsPage />
+          )}
+
+          {aba === 'metas' && (
             <Card bordaAnimada padding="lg">
               <div className="text-center py-6 space-y-2 min-w-0">
                 <h2 className="text-base sm:text-lg font-bold text-white truncate">
-                  {aba === 'relatorios' && 'Relatórios e PDF (Fase 4)'}
-                  {aba === 'metas' && 'Metas e Conquistas (Fase 5)'}
+                  Metas e Conquistas (Fase 5)
                 </h2>
                 <p className="text-xs sm:text-sm text-[#9A9AA6] max-w-md mx-auto">
                   Esta área será liberada na próxima fase do cronograma.

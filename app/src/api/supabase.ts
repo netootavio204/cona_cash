@@ -61,8 +61,8 @@ export async function fetchAppSettings(): Promise<AppSettings> {
     return {
       id: 1,
       signup_open: true,
-      schema_version: '003b_income_sources',
-      app_version: 'v0.3.2 beta',
+      schema_version: '004_reports',
+      app_version: 'v0.4.0 beta',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -734,4 +734,23 @@ export async function updateSignupOpenAdmin(signupOpen: boolean): Promise<void> 
     .eq('id', 1);
 
   if (error) throw error;
+}
+
+// ============================================================================
+// RELATÓRIOS E DASHBOARD (get_financial_report — Fase 4)
+// ============================================================================
+
+export async function fetchFinancialReport(params: {
+  startDateISO: string;
+  endDateISO: string;
+  incomeSourceId?: string;
+}): Promise<import('../types/database').FinancialReportData> {
+  const { data, error } = await supabase.rpc('get_financial_report', {
+    p_start_date: params.startDateISO,
+    p_end_date: params.endDateISO,
+    p_income_source_id: params.incomeSourceId || null,
+  });
+
+  if (error) throw error;
+  return data as import('../types/database').FinancialReportData;
 }

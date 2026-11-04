@@ -192,3 +192,80 @@ export function sumEarningsAndExpenses(
 
   return { entradasGanhoCents, aportesCents, saidasCents };
 }
+
+/**
+ * Retorna os limites ISO UTC de semana, mes ou dia em America/Sao_Paulo
+ */
+
+/**
+ * Retorna os limites ISO UTC de semana, mês ou dia em America/Sao_Paulo
+ */
+export function getPeriodSaoPauloBoundsISO(
+  tipo: 'dia' | 'semana' | 'mes',
+  refDate: Date = new Date(),
+  weekStartsOn: 0 | 1 = 1
+): {
+  startISO: string;
+  endISO: string;
+  label: string;
+  prevStartISO: string;
+  prevEndISO: string;
+} {
+  const datePart = toSaoPauloDateTimeLocal(refDate).slice(0, 10);
+  const [y, m, d] = datePart.split('-').map(Number);
+  const cur = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+
+  if (tipo === 'dia') {
+    const startISO = new Date(datePart + 'T00:00:00.000-03:00').toISOString();
+    const endISO = new Date(datePart + 'T23:59:59.999-03:00').toISOString();
+    const prevDate = new Date(cur.getTime() - 24 * 60 * 60 * 1000);
+    const pPart = toSaoPauloDateTimeLocal(prevDate).slice(0, 10);
+    return {
+      startISO,
+      endISO,
+      label: d.toString().padStart(2, '0') + '/' + m.toString().padStart(2, '0') + '/' + y,
+      prevStartISO: new Date(pPart + 'T00:00:00.000-03:00').toISOString(),
+      prevEndISO: new Date(pPart + 'T23:59:59.999-03:00').toISOString(),
+    };
+  }
+
+  if (tipo === 'semana') {
+    const dayOfWeek = cur.getUTCDay(); // 0 = Domingo, 1 = Segunda...
+    const diff = weekStartsOn === 1 ? (dayOfWeek === 0 ? -6 : 1 - dayOfWeek) : -dayOfWeek;
+    const startDay = new Date(cur.getTime() + diff * 24 * 60 * 60 * 1000);
+    const endDay = new Date(startDay.getTime() + 6 * 24 * 60 * 60 * 1000);
+    const sPart = toSaoPauloDateTimeLocal(startDay).slice(0, 10);
+    const ePart = toSaoPauloDateTimeLocal(endDay).slice(0, 10);
+    const prevStart = new Date(startDay.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const prevEnd = new Date(endDay.getTime() - 7 * 24 * 60 * 60 * 1000);
+    return {
+      startISO: new Date(sPart + 'T00:00:00.000-03:00').toISOString(),
+      endISO: new Date(ePart + 'T23:59:59.999-03:00').toISOString(),
+      label: 'Semana ' + sPart.slice(8, 10) + '/' + sPart.slice(5, 7) + ' a ' + ePart.slice(8, 10) + '/' + ePart.slice(5, 7),
+      prevStartISO: new Date(toSaoPauloDateTimeLocal(prevStart).slice(0, 10) + 'T00:00:00.000-03:00').toISOString(),
+      prevEndISO: new Date(toSaoPauloDateTimeLocal(prevEnd).slice(0, 10) + 'T23:59:59.999-03:00').toISOString(),
+    };
+  }
+
+  // mes
+  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const sPart = y + '-' + m.toString().padStart(2, '0') + '-01';
+  const ePart = y + '-' + m.toString().padStart(2, '0') + '-' + lastDay.toString().padStart(2, '0');
+  const prevMonthRef = new Date(Date.UTC(y, m - 2, 1, 12, 0, 0));
+  const pmY = prevMonthRef.getUTCFullYear();
+  const pmM = prevMonthRef.getUTCMonth() + 1;
+  const pmLast = new Date(Date.UTC(pmY, pmM, 0)).getUTCDate();
+  const pmSPart = pmY + '-' + pmM.toString().padStart(2, '0') + '-01';
+  const pmEPart = pmY + '-' + pmM.toString().padStart(2, '0') + '-' + pmLast.toString().padStart(2, '0');
+  const mesesNome = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+  return {
+    startISO: new Date(sPart + 'T00:00:00.000-03:00').toISOString(),
+    endISO: new Date(ePart + 'T23:59:59.999-03:00').toISOString(),
+    label: mesesNome[m - 1] + ' de ' + y,
+    prevStartISO: new Date(pmSPart + 'T00:00:00.000-03:00').toISOString(),
+    prevEndISO: new Date(pmEPart + 'T23:59:59.999-03:00').toISOString(),
+  };
+}

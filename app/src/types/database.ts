@@ -165,5 +165,70 @@ export const SUGESTOES_CATEGORIAS_3D: {
   { name: 'Taxas de marketplace', icon: 'receipt', color: '#FFC940' },
 ];
 
+export interface FinancialReportTotals {
+  gross_earnings_cents: number;
+  fees_cents: number;
+  net_earnings_cents: number;
+  expenses_cents: number;
+  contributions_cents: number;
+  net_result_cents: number;
+  transaction_count: number;
+}
+
+export interface FinancialReportSourceItem {
+  source_id: string;
+  source_name: string;
+  source_color: string;
+  source_icon: CategoryIconName | string;
+  counts_as_earning: boolean;
+  earnings_net_cents: number;
+  direct_expenses_cents: number;
+  profit_cents: number;
+  count: number;
+}
+
+export interface FinancialReportCategoryItem {
+  category_id: string;
+  category_name: string;
+  category_color: string;
+  category_icon: CategoryIconName;
+  total_cents: number;
+  count: number;
+}
+
+export interface FinancialReportPaymentMethodItem {
+  payment_method_id: string;
+  payment_method_name: string;
+  gross_cents: number;
+  fee_cents: number;
+  net_cents: number;
+  count: number;
+}
+
+export interface FinancialReportAccountItem {
+  account_id: string;
+  account_name: string;
+  account_type: AccountType;
+  account_color: string;
+  in_cents: number;
+  out_cents: number;
+}
+
+export interface FinancialReportDailyItem {
+  day: string; // YYYY-MM-DD
+  earnings_net_cents: number;
+  expenses_cents: number;
+  contributions_cents: number;
+}
+
+export interface FinancialReportData {
+  totals: FinancialReportTotals;
+  by_source: FinancialReportSourceItem[];
+  by_category: FinancialReportCategoryItem[];
+  by_payment_method: FinancialReportPaymentMethodItem[];
+  by_account: FinancialReportAccountItem[];
+  daily: FinancialReportDailyItem[];
+}
+
 export const TAGS_RAPIDAS_ENTRADA = DEFAULT_QUICK_TAGS;
 export const TAGS_RAPIDAS_SAIDA = DEFAULT_QUICK_TAGS;
