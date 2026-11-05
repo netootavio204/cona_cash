@@ -182,3 +182,4 @@ grant select, insert, update, delete on public.goals to authenticated;
 grant select, insert, update, delete on public.goal_achievements to authenticated;
 grant execute on function public.record_goal_celebration(uuid, text, bigint, bigint) to authenticated;
 grant execute on function public.ensure_my_goals() to authenticated;
+

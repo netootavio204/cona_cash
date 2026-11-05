@@ -81,7 +81,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <aside
       aria-label="Menu lateral de navegação"
       className={[
-        'hidden lg:flex lg:flex-col lg:justify-between lg:shrink-0 lg:sticky lg:top-0 lg:h-screen bg-[#141418]/95 backdrop-blur-xl border-r border-[#262630] transition-[width] duration-200 z-40 select-none',
+        'hidden lg:flex lg:flex-col lg:justify-between lg:shrink-0 lg:fixed lg:left-0 lg:top-0 lg:bottom-0 lg:h-screen bg-[#141418]/95 backdrop-blur-xl border-r border-[#262630] transition-[width] duration-200 z-40 select-none overflow-y-auto',
         recolhida
           ? 'lg:w-[76px] min-[1920px]:w-[88px]'
           : 'lg:w-[248px] min-[1920px]:w-[288px]',

@@ -89,3 +89,4 @@ export function playExpenseWarningSound(soundEnabled: boolean = true): void {
     console.warn('[Audio] Não foi possível reproduzir som de alerta:', err);
   }
 }
+

@@ -370,3 +370,4 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
     </div>
   );
 };
+

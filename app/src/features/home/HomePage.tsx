@@ -45,6 +45,7 @@ import { Card } from '../../components/ui/Card';
 import { Botao } from '../../components/ui/Botao';
 import { ValorMoeda } from '../../components/ui/ValorMoeda';
 import { BottomNav, type AbaNavegacao } from '../../components/ui/BottomNav';
+import { PwaInstallPrompt } from '../../components/ui/PwaInstallPrompt';
 import { Sidebar } from '../../components/ui/Sidebar';
 import { Snackbar, type SnackbarMensagem } from '../../components/ui/Snackbar';
 import { ConfigPage, type SecaoConfig } from '../config/ConfigPage';
@@ -349,7 +350,14 @@ export const HomePage: React.FC = () => {
         aoSair={sair}
       />
 
-      <div className="contents lg:flex-1 lg:min-w-0 lg:flex lg:flex-col">
+      <div
+        className={[
+          'contents lg:flex-1 lg:min-w-0 lg:flex lg:flex-col transition-[margin-left] duration-200',
+          sidebarRecolhida
+            ? 'lg:ml-[76px] min-[1920px]:ml-[88px]'
+            : 'lg:ml-[248px] min-[1920px]:ml-[288px]',
+        ].join(' ')}
+      >
         {/* Barra Superior Mobile/Tablet (< 1024 px) — 100% INTACTA */}
         <header className="sticky top-0 z-30 bg-[#0B0B0D]/85 backdrop-blur-xl border-b border-[#262630] px-3 sm:px-6 py-3 lg:hidden">
           <div className="max-w-2xl mx-auto flex items-center justify-between gap-2 min-w-0">
@@ -953,6 +961,7 @@ export const HomePage: React.FC = () => {
         </>
       )}
 
+      <PwaInstallPrompt />
       <BottomNav abaAtiva={aba} aoTrocarAba={setAba} />
       <Snackbar mensagem={snackbar} aoFechar={() => setSnackbar(null)} />
     </div>

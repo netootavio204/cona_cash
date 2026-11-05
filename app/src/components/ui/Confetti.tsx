@@ -115,3 +115,4 @@ export const Confetti: React.FC<ConfettiProps> = ({ active, onComplete }) => {
     />
   );
 };
+

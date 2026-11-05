@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './features/auth/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 
 const LoginPage = lazy(() =>
   import('./features/auth/LoginPage').then((m) => ({ default: m.LoginPage }))
@@ -49,9 +50,11 @@ const AppRouter: React.FC = () => {
 
 export function App() {
   return (
-    <AuthProvider>
-      <AppRouter />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppRouter />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

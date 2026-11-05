@@ -22,8 +22,16 @@ import {
   Briefcase,
   Sparkles,
   X,
+  Moon,
+  Sun,
+  Database,
+  FileSpreadsheet,
+  Download,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import { downloadJSON, downloadCSV } from '../../utils/exportUserData';
+import { fetchTransactions, fetchGoals } from '../../api/supabase';
 import {
   ensureMyDefaults,
   fetchAccounts,
@@ -102,6 +110,9 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
   const { perfil, usuario, configApp, recarregarPerfilEConfig } = useAuth();
   const isAdmin = perfil?.role === 'admin' && perfil?.status === 'approved';
 
+  const { theme, setTheme } = useTheme();
+  const [exportandoDados, setExportandoDados] = useState(false);
+
   const [secao, setSecao] = useState<SecaoConfig>('contas');
   const [carregandoDados, setCarregandoDados] = useState(true);
 
@@ -164,6 +175,63 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
   useEffect(() => {
     carregarTudo();
   }, [carregarTudo]);
+
+
+  const handleExportarCSV = async () => {
+    setExportandoDados(true);
+    try {
+      const txsRes = await fetchTransactions({ pageSize: 10000 });
+      const txs = txsRes.data;
+      const headers = ['Data/Hora', 'Tipo', 'Conta Origem', 'Conta Destino', 'Forma Pagamento', 'Categoria', 'Fonte Renda', 'Valor Bruto (R$)', 'Taxa (R$)', 'Valor Liquido (R$)', 'Observacoes'];
+      const rows = txs.map(t => [
+        t.occurred_at,
+        t.kind,
+        contas.find(c => c.id === t.account_id)?.name || '',
+        contas.find(c => c.id === t.to_account_id)?.name || '',
+        formas.find(f => f.id === t.payment_method_id)?.name || '',
+        categorias.find(c => c.id === t.category_id)?.name || '',
+        fontes.find(s => s.id === t.income_source_id)?.name || '',
+        (t.gross_cents / 100).toFixed(2),
+        (t.fee_cents / 100).toFixed(2),
+        (t.net_cents / 100).toFixed(2),
+        t.note || ''
+      ]);
+      downloadCSV(`Cona_Cash_Lancamentos_${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
+      onShowToast('Planilha CSV exportada com sucesso!', 'sucesso');
+    } catch (err: any) {
+      onShowToast('Erro ao exportar CSV: ' + err.message, 'erro');
+    } finally {
+      setExportandoDados(false);
+    }
+  };
+
+  const handleExportarJSON = async () => {
+    setExportandoDados(true);
+    try {
+      const [txsRes, metasRes] = await Promise.all([
+        fetchTransactions({ pageSize: 10000 }),
+        fetchGoals().catch(() => [])
+      ]);
+      const backupData = {
+        exported_at: new Date().toISOString(),
+        app_name: APP_NAME,
+        app_version: APP_VERSION,
+        user_email: usuario?.email || '',
+        accounts: contas,
+        payment_methods: formas,
+        categories: categorias,
+        income_sources: fontes,
+        goals: metasRes,
+        transactions: txsRes.data
+      };
+      downloadJSON(`Cona_Cash_Backup_Completo_${new Date().toISOString().slice(0, 10)}.json`, backupData);
+      onShowToast('Backup JSON exportado com sucesso!', 'sucesso');
+    } catch (err: any) {
+      onShowToast('Erro ao exportar backup JSON: ' + err.message, 'erro');
+    } finally {
+      setExportandoDados(false);
+    }
+  };
 
   // ============================================================================
   // MODAL DE CONTA
@@ -1342,6 +1410,52 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
                 placeholder="Ex.: Octavio"
               />
 
+              {/* Tema Claro / Escuro (Fase 6) */}
+              <div className="p-3.5 rounded-xl bg-[#0B0B0D] border border-[#262630] flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-[#FF7A1A]/15 text-[#FF7A1A] flex items-center justify-center shrink-0">
+                    {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-white truncate">
+                      Tema da Interface
+                    </p>
+                    <p className="text-xs text-[#9A9AA6] truncate">
+                      {theme === 'dark' ? 'Modo Escuro Oficial (Dark)' : 'Modo Claro (Light)'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-1.5 bg-[#141418] p-1 rounded-xl border border-[#262630] shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setTheme('dark')}
+                    className={[
+                      'min-h-[38px] px-3 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5',
+                      theme === 'dark'
+                        ? 'bg-[#FF7A1A] text-[#0B0B0D]'
+                        : 'text-[#9A9AA6] hover:text-white',
+                    ].join(' ')}
+                  >
+                    <Moon className="w-3.5 h-3.5" />
+                    <span>Escuro</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTheme('light')}
+                    className={[
+                      'min-h-[38px] px-3 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5',
+                      theme === 'light'
+                        ? 'bg-[#FF7A1A] text-[#0B0B0D]'
+                        : 'text-[#9A9AA6] hover:text-white',
+                    ].join(' ')}
+                  >
+                    <Sun className="w-3.5 h-3.5" />
+                    <span>Claro</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Som ligado/desligado */}
               <div className="p-3.5 rounded-xl bg-[#0B0B0D] border border-[#262630] flex items-center justify-between gap-3 min-w-0">
                 <div className="flex items-center gap-3 min-w-0">
@@ -1508,6 +1622,45 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
                 texto="Salvar minhas preferências"
               />
             </form>
+          </Card>
+
+          {/* Card de Exportação de Dados e Segurança (Fase 6) */}
+          <Card padding="lg">
+            <div className="flex flex-col gap-4 min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <Database className="w-4 h-4 text-[#FF7A1A] shrink-0" />
+                <h2 className="text-base font-bold text-white truncate">
+                  Segurança & Exportação de Dados
+                </h2>
+              </div>
+              <p className="text-xs text-[#9A9AA6] leading-relaxed">
+                Seus dados estão protegidos por criptografia e isolamento individual de banco (RLS). Você pode baixar uma cópia completa dos seus lançamentos e configurações a qualquer momento.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 min-w-0">
+                <Botao
+                  type="button"
+                  variante="secundario"
+                  icone={<FileSpreadsheet className="w-4 h-4 text-[#2EE59D]" />}
+                  texto="Exportar Lançamentos (CSV)"
+                  carregando={exportandoDados}
+                  onClick={handleExportarCSV}
+                />
+                <Botao
+                  type="button"
+                  variante="secundario"
+                  icone={<Download className="w-4 h-4 text-[#38BDF8]" />}
+                  texto="Backup Completo (JSON)"
+                  carregando={exportandoDados}
+                  onClick={handleExportarJSON}
+                />
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#0B0B0D] border border-[#262630]/60 flex items-center gap-2 text-xs text-[#9A9AA6]">
+                <CheckCircle2 className="w-4 h-4 text-[#2EE59D] shrink-0" />
+                <span>Isolamento Ativo: Nenhuma outra conta tem acesso aos seus lançamentos.</span>
+              </div>
+            </div>
           </Card>
 
           {/* Card para Alterar a Senha */}

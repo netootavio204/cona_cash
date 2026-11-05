@@ -69,8 +69,8 @@ describe('Formatação de moeda em centavos e taxas (PRD 5, 7.1, Fase 2, Fase 3 
     expect(res.saidasCents).toBe(2000); // R$ 20,00 (Transferência ignorada)
   });
 
-  it('mantém versão sincronizada v0.5.0 beta / 005_goals', () => {
-    expect(APP_VERSION).toBe('v0.5.0 beta');
+  it('mantém versão sincronizada v1.0.0 beta / 005_goals', () => {
+    expect(APP_VERSION).toBe('v1.0.0 beta');
     expect(SCHEMA_VERSION).toBe('005_goals');
   });
 });

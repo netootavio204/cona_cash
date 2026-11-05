@@ -89,3 +89,4 @@ export const GoalProgressBar: React.FC<GoalProgressBarProps> = ({ progress, comp
     </div>
   );
 };
+

@@ -82,3 +82,67 @@
   }
 }
 
+
+
+/* ==============================================================================
+ * TEMA CLARO (LIGHT MODE) — FASE 6
+ * ============================================================================== */
+html.light,
+html.light body {
+  background-color: #F8F9FA !important;
+  color: #1E293B !important;
+  color-scheme: light;
+}
+
+html.light .bg-\[\#0B0B0D\] {
+  background-color: #F8F9FA !important;
+}
+
+html.light .bg-\[\#141418\] {
+  background-color: #FFFFFF !important;
+}
+
+html.light .bg-\[\#141419\] {
+  background-color: #F1F5F9 !important;
+}
+
+html.light .bg-\[\#1B1B22\] {
+  background-color: #E2E8F0 !important;
+}
+
+html.light .border-\[\#262630\] {
+  border-color: #CBD5E1 !important;
+}
+
+html.light .border-\[\#262630\]\/40,
+html.light .border-\[\#262630\]\/50,
+html.light .border-\[\#262630\]\/60 {
+  border-color: rgba(203, 213, 225, 0.6) !important;
+}
+
+html.light .text-white {
+  color: #0F172A !important;
+}
+
+html.light .text-\[\#F5F5F7\] {
+  color: #1E293B !important;
+}
+
+html.light .text-\[\#9A9AA6\] {
+  color: #64748B !important;
+}
+
+html.light header {
+  background-color: rgba(248, 249, 250, 0.9) !important;
+  border-color: #E2E8F0 !important;
+}
+
+html.light aside {
+  background-color: rgba(255, 255, 255, 0.96) !important;
+  border-color: #E2E8F0 !important;
+}
+
+html.light nav {
+  background-color: rgba(255, 255, 255, 0.96) !important;
+  border-color: #E2E8F0 !important;
+}

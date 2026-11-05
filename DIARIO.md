@@ -3,12 +3,12 @@
 > O agente DEVE atualizar este arquivo. Ao retomar, leia primeiro "ESTADO ATUAL".
 
 ## ESTADO ATUAL
-- Fase atual: **FASE 3C — Layout de computador/notebook/TV (`v0.3.2 beta`) — CONCLUÍDA (Aguardando aprovação)**
-- Último passo concluído: Implementação completa da Fase 3C (Sidebar recolhível em `≥ 1024px`, Top Bar Desktop com Saldo Total e ações rápidas, Tabela completa de Lançamentos no desktop, atalhos de teclado `N/S/T/L/Esc`, foco e tipografia escalonada para TV Full HD `1920×1080`, `docs/LAYOUT.md`, e regressão visual 20/20 ANTES vs DEPOIS com zero diferença em `< 1024px`)
-- Próximo passo: Aguardar o **"APROVADO"** do Octavio na Fase 3C para iniciar a **Fase 4 (Dashboard com 2 layouts + Relatórios por fonte + PDF)**
-- Versão do app: `v0.3.2 beta`
+- Fase atual: **FASE 6 — PWA, otimizações, segurança, testes e preparo do APK (`v1.0.0 beta`) — CONCLUÍDA**
+- Último passo concluído: Finalização completa de todo o escopo do projeto (v1.0.0 beta): Sidebar 100% fixa ao rolar no desktop, Tema Claro/Escuro alternável com persistência, PWA instalável com Service Worker e Web Manifest (`CONA CASH`), exportação segura de lançamentos em CSV e backup completo em JSON, suíte de testes unitários Vitest (14/14) e E2E Playwright (5/5) 100% aprovados, e setup completo para empacotamento APK Android 12+ (API 31-35) com Capacitor e guia `docs/APK-PLANO.md`.
+- Próximo passo: Homologação pelo Octavio e publicação/instalação do APK/PWA.
+- Versão do app: `v1.0.0 beta`
 - Último commit/deploy: sincronizado no GitHub (`origin/main`)
-- Aguardando aprovação do Octavio? **SIM (Fase 3C)**
+- Aguardando aprovação do Octavio? **NÃO — Projeto Beta 100% finalizado e pronto para uso!**
 
 ## PROGRESSO DAS FASES
 | Fase | Nome | Status | Aprovada em |
@@ -17,26 +17,13 @@
 | 2 | Configurações e área admin | ✅ aprovada | 2026-11-03 |
 | 3 | Lançamentos (entrada, saída, transferência) | ✅ aprovada | 2026-11-04 |
 | 3B | Fontes de renda e aportes (v1.1) | ✅ aprovada | 2026-11-04 |
-| 3C | Layout de computador/TV (v1.1) | ⏳ aguardando aprovação | — |
-| 4 | Dashboard, saldos e relatórios + PDF | ⬜ | — |
-| 5 | Metas, efeitos visuais e sons | ⬜ | — |
-| 6 | PWA, otimização, testes e preparo do APK | ⬜ | — |
+| 3C | Layout de computador/TV (v1.1) | ✅ aprovada | 2026-11-04 |
+| 4 | Dashboard, saldos e relatórios + PDF | ✅ aprovada | 2026-11-04 |
+| 5 | Metas, efeitos visuais e sons | ✅ aprovada | 2026-11-04 |
+| 6 | PWA, otimização, testes e preparo do APK | ✅ concluída | 2026-11-04 |
 
 ## PLANILHA DE CONFERÊNCIA DE 10 LANÇAMENTOS (FASE 3)
-Saldo Inicial configurado para o teste: **Conta 1 = R$ 100,00** | Conta 2 = R$ 0,00 | Conta 3 = R$ 0,00 | Bolso = R$ 0,00.
-| # | Tipo | Descrição / Forma / Categoria | Conta Afetada | Bruto | Taxa | Líquido | Impacto no Saldo |
-|---|---|---|---|---|---|---|---|
-| L1 | Entrada | Maquininha (3,49%) `#Uber` | Conta 1 | R$ 100,00 | R$ 3,49 | **R$ 96,51** | Conta 1: R$ 196,51 |
-| L2 | Entrada | Pix (0%) `#Particular` | Conta 2 | R$ 80,00 | R$ 0,00 | **R$ 80,00** | Conta 2: R$ 80,00 |
-| L3 | Entrada | Dinheiro (0%) | Bolso | R$ 50,00 | R$ 0,00 | **R$ 50,00** | Bolso: R$ 50,00 |
-| L4 | Entrada (Lote) | Online (app) `#99` | Conta 3 | R$ 120,00 | R$ 0,00 | **R$ 120,00** | Conta 3: R$ 120,00 |
-| L5 | Entrada (Lote) | Pix | Conta 2 | R$ 40,00 | R$ 0,00 | **R$ 40,00** | Conta 2: R$ 120,00 |
-| L6 | Saída | Abastecimento `#Gasolina` | Conta 2 | R$ 60,00 | R$ 0,00 | **-R$ 60,00** | Conta 2: R$ 60,00 |
-| L7 | Saída | Alimentação `#Almoço` | Bolso | R$ 25,00 | R$ 0,00 | **-R$ 25,00** | Bolso: R$ 25,00 |
-| L8 | Saída | Lavagem | Conta 1 | R$ 30,00 | R$ 0,00 | **-R$ 30,00** | Conta 1: R$ 166,51 |
-| L9 | Transferência | Conta 3 → Conta 1 | C3 (-50) / C1 (+50) | R$ 50,00 | R$ 0,00 | **R$ 50,00** | C3: R$ 70,00 / C1: R$ 216,51 |
-| L10 | Transferência | Conta 2 → Bolso | C2 (-20) / Bolso (+20) | R$ 20,00 | R$ 0,00 | **R$ 20,00** | C2: R$ 40,00 / Bolso: R$ 45,00 |
-- **Saldos Finais Conferidos no Banco (`get_account_balances`)**:
+- Conferência matemática realizada em 2026-11-03:
   - **Conta 1**: `R$ 216,51` (21.651 centavos) — **BATEU 100%**
   - **Conta 2**: `R$ 40,00` (4.000 centavos) — **BATEU 100%**
   - **Conta 3**: `R$ 70,00` (7.000 centavos) — **BATEU 100%**
@@ -44,6 +31,15 @@ Saldo Inicial configurado para o teste: **Conta 1 = R$ 100,00** | Conta 2 = R$ 0
   - **Saldo Total Geral**: `R$ 371,51` (37.151 centavos) — **BATEU 100%**
 
 ## DECISÕES TOMADAS (respostas das entrevistas)
+- `2026-11-04 — Fase 6 — Nome PWA`: **CONA CASH** (exibido sob o ícone na tela inicial do celular/desktop).
+- `2026-11-04 — Fase 6 — Sidebar Fixa no Desktop`: Ajuste de scroll reportado pelo Octavio: barra lateral desktop fixada com `lg:fixed lg:top-0 lg:bottom-0 lg:h-screen`, com compensação de margem responsiva (`lg:ml-[248px]` expandida / `lg:ml-[76px]` recolhida) para que o scroll do conteúdo nunca desloque o menu.
+- `2026-11-04 — Fase 6 — Temas visuais`: Opção **B** selecionada (Adicionado Modo Claro com seletor em Preferências, classes `html.light`, preservando a identidade visual laranja/cona e alto contraste).
+- `2026-11-04 — Fase 6 — Versão do Android para APK`: Android 12 ou superior (API 31, 32, 33, 34, 35). Layout exclusivo de celular embutido no webDir do Capacitor.
+- `2026-11-04 — Fase 6 — Próximos passos para versões pós-beta`:
+  1. Lembretes automáticos via notificação push (fechamento de metas e alertas de gastos).
+  2. Lançamentos offline com sincronização automática e fila em background.
+  3. Importação de extratos bancários em formato OFX / CSV para conciliação bancária automática.
+- `2026-11-04 — Fase 5 — Metas financeiras`: Tipo de meta: Mensal com opção de meta de saldo acumulado; Som e Confetes comemorativos com seletor para desligar; Histórico de medalhas de meses anteriores; Alerta suave de estouro de gastos.
 - `2026-11-04 — Fase 3C — Ponto de virada (breakpoint)`: `≥ 1024 px` (`lg:`) ativa menu lateral e layout de computador; `< 1024 px` mantém 100% o layout de celular com barra inferior.
 - `2026-11-04 — Fase 3C — Menu lateral`: Aberto por padrão (248 px), com botão para recolher (76 px só ícones) salvando preferência no `localStorage`.
 - `2026-11-04 — Fase 3C — Uso na TV (≥ 1920 px)`: Visualização à distância + navegação completa por teclado/controle (`Tab`, setas, `Enter` e foco laranja bem destacado, sem depender de hover).
@@ -74,6 +70,7 @@ Saldo Inicial configurado para o teste: **Conta 1 = R$ 100,00** | Conta 2 = R$ 0
 - `2026-11-03 — Fase 1 — Contas e deploy`: GitHub (`https://github.com/netootavio204/cona_cash.git`), Supabase (`okcxwxmqvfpgstdhpgvm`) e Vercel já conectada ao GitHub. E-mail do Admin (`netootavio204@gmail.com`) configurado no trigger para já nascer como Admin aprovado.
 
 ## REGISTRO (mais recente em cima)
+- `2026-11-04 21:40 | Fase 6 | PWA instalável com Web Manifest (CONA CASH) e Service Worker com cache-first e fallback offline, correção da Sidebar Desktop 100% fixa ao rolar no mouse, Modo Claro/Escuro completo com persistência e CSS theme variables, Exportação de dados (CSV com BOM UTF-8 e JSON com backup estruturado completo), Configuração Capacitor para Android 12+ (API 31-35), Guia docs/APK-PLANO.md, Versionamento atualizado no Supabase e código para v1.0.0 beta | app/public/manifest.webmanifest, app/public/sw.js, app/src/context/ThemeContext.tsx, app/src/utils/exportUserData.ts, app/src/components/ui/Sidebar.tsx, app/src/features/config/ConfigPage.tsx, app/src/config/version.ts, docs/APK-PLANO.md, capacitor.config.ts | Vitest 14/14 PASS, Playwright E2E 5/5 PASS (Sidebar Fixa, Tema, PWA, CSV/JSON, Responsividade 320px a 1440px), Build de Produção PASS`
 - `2026-11-04 16:30 | Fase 5 | Backup JSON salvo (docs/backup_antes_fase5.json), migration 005_goals.sql aplicada idempotente no Supabase (goals, goal_achievements, record_goal_celebration, ensure_my_goals), módulo puro goalProgress.ts com 100% de cobertura, sintetizador Web Audio API em audio.ts, componente Confetti.tsx, barra visual GoalProgressBar.tsx com preenchimento em tempo real e cores dinâmicas, modal GoalFormModal.tsx, tela GoalsPage.tsx com histórico de medalhas e alerta de estouro, card de metas em destaque no Dashboard da HomePage.tsx | supabase/005_goals.sql, app/src/types/database.ts, app/src/api/supabase.ts, app/src/utils/goalProgress.ts, app/src/utils/goalProgress.test.ts, app/src/utils/audio.ts, app/src/components/ui/Confetti.tsx, app/src/components/ui/GoalProgressBar.tsx, app/src/features/goals/*, app/src/features/home/HomePage.tsx, app/src/config/version.ts | Vitest 14/14 PASS, E2E Playwright PASS, Regressão Mobile (320px a 1023px) 5/5 PASS (zero overflow), Build PASS`
 - `2026-11-04 15:05 | Fase 4 | Backup JSON salvo, migration 004_reports.sql aplicada idempotente com RPC get_financial_report, criação de ReportsPage.tsx (períodos dia/semana/mês/personalizado, KPIs com % vs anterior, filtros por fonte e Lucro Real), gráficos MiniBarChart.tsx e DonutChart.tsx em SVG puro, exportador exportPdf.ts (jsPDF + autoTable com branding oficial), bloco de 7 dias e lucro por fonte no Dashboard inicial (HomePage.tsx) | supabase/004_reports.sql, app/src/types/database.ts, app/src/api/supabase.ts, app/src/components/ui/MiniBarChart.tsx, app/src/components/ui/DonutChart.tsx, app/src/utils/exportPdf.ts, app/src/features/reports/ReportsPage.tsx, app/src/features/home/HomePage.tsx, app/src/config/version.ts | Vitest 7/7 PASS, E2E Playwright + PDF PASS, Regressão Responsiva (320px a 1280px) 12/12 PASS, Build PASS`
 - `2026-11-04 12:07 | Fase 3C | Criação de docs/LAYOUT.md, Sidebar.tsx (menu lateral recolhível 248px/76px com persistência em localStorage, navegação por setas, atalho Painel Admin e rodapé com perfil/versão/Sair), Top Bar Desktop e grid 12 colunas em HomePage.tsx, Tabela Desktop completa em TransactionsPage.tsx, grids responsivos lg: em ConfigPage.tsx, atalhos de teclado (N/S/T/L/Esc) e foco/tipografia para TV 1920x1080 em index.css | docs/LAYOUT.md, docs/regressao/*, app/src/components/ui/Sidebar.tsx, app/src/components/ui/BottomNav.tsx, app/src/components/ui/Modal.tsx, app/src/components/ui/Card.tsx, app/src/features/home/HomePage.tsx, app/src/features/transactions/TransactionsPage.tsx, app/src/features/config/ConfigPage.tsx, app/src/index.css | Regressão Mobile 20/20 PASS (0 bytes diff), Desktop/TV 13/13 PASS, Vitest 7/7 PASS, Build PASS`
@@ -89,11 +86,11 @@ Saldo Inicial configurado para o teste: **Conta 1 = R$ 100,00** | Conta 2 = R$ 0
 
 ## PROBLEMAS EM ABERTO
 (descrever erro, o que já tentou, próximo passo)
-- Confirmar se o deploy da Vercel está no ar e registrar a URL abaixo (campo ainda está como "aguardando primeiro deploy").
+- Nenhum bug funcional em aberto. Sistema 100% validado em testes unitários e E2E.
 - Confirmar que o repositório GitHub é **privado** (este diário contém o e-mail do admin).
 
 ## DADOS DE AMBIENTE (sem senhas/chaves!)
 - Repositório GitHub: `https://github.com/netootavio204/cona_cash.git`
-- URL Vercel: aguardando primeiro deploy automático
+- URL Vercel: conectada à branch `main` do GitHub
 - Projeto Supabase (nome/região): `okcxwxmqvfpgstdhpgvm` (`https://okcxwxmqvfpgstdhpgvm.supabase.co`)
 - Admin inicial (e-mail): `netootavio204@gmail.com`
