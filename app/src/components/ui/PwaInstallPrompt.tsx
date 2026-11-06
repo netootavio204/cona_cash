@@ -81,3 +81,4 @@ export const PwaInstallPrompt: React.FC = () => {
     </div>
   );
 };
+

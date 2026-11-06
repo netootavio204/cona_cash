@@ -103,3 +103,4 @@ npx capacitor-assets generate --android
 - [ ] Login funcionando e mantendo sessão salva ao reabrir.
 - [ ] Barra inferior (`BottomNav`) acessível com alvo de toque adequado.
 - [ ] Exportação de relatórios em PDF abrindo no leitor nativo do celular.
+

@@ -38,8 +38,19 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Não fazer cache de chamadas para API Supabase (dados em tempo real)
-  if (url.origin.includes('supabase.co')) {
+  // Ignorar esquemas não-HTTP (ex: chrome-extension, capacitor)
+  if (!url.protocol.startsWith('http')) {
+    return;
+  }
+
+  // NUNCA fazer cache de chamadas da API/Auth Supabase nem requisições autenticadas
+  if (
+    url.origin.includes('supabase.co') ||
+    url.pathname.includes('/auth') ||
+    url.pathname.includes('/rest/v1') ||
+    event.request.headers.has('authorization') ||
+    event.request.headers.has('apikey')
+  ) {
     return;
   }
 
@@ -84,3 +95,4 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+

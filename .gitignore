@@ -22,4 +22,28 @@ app/.vercel/
 .DS_Store
 Thumbs.db
 *.log
+# Backups com dados de usuários (NUNCA versionar!)
 supabase/backup_*.json
+docs/backup_*.json
+*.backup.json
+*.json.bak
+*.bak
+
+# Chaves e certificados (Android Keystore / Certificados)
+*.keystore
+*.jks
+*.p12
+*.pem
+*.key
+APK/*.apk
+APK/*.aab
+!APK/.gitkeep
+
+# Arquivos de especificação e criação interna (mantidos apenas no disco local, excluídos do GitHub)
+PRD.md
+PRD*.md
+00-SKILL.md
+*SKILL*.md
+DIARIO.md
+FASE-*.md
+ATUALIZACAO-*.md

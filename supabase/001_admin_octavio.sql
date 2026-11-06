@@ -8,10 +8,10 @@ UPDATE public.profiles
 SET role = 'admin',
     status = 'approved',
     updated_at = now()
-WHERE lower(email) = lower('netootavio204@gmail.com');
+WHERE lower(email) = lower('seu_email_admin@exemplo.com');
 
 -- Confirma também o e-mail no Supabase Auth (caso a confirmação de e-mail esteja ativa no projeto)
 UPDATE auth.users
 SET email_confirmed_at = COALESCE(email_confirmed_at, now())
-WHERE lower(email) = lower('netootavio204@gmail.com');
+WHERE lower(email) = lower('seu_email_admin@exemplo.com');
 

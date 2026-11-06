@@ -157,7 +157,7 @@ CREATE TRIGGER trg_auth_users_check_signup
   EXECUTE FUNCTION public.check_signup_allowed();
 
 -- 8. Trigger em auth.users: cria automaticamente o profile com status = 'pending'
--- (Exceção: o e-mail oficial do admin inicial netootavio204@gmail.com já nasce como admin aprovado)
+-- (Exceção: o primeiro usuário cadastrado no sistema já nasce como admin aprovado)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -173,7 +173,8 @@ BEGIN
     split_part(COALESCE(NEW.email, 'usuario'), '@', 1)
   );
 
-  v_is_initial_admin := (lower(COALESCE(NEW.email, '')) = 'netootavio204@gmail.com');
+  -- O primeiro usuário registrado no sistema torna-se o administrador principal
+  v_is_initial_admin := NOT EXISTS (SELECT 1 FROM public.profiles);
 
   INSERT INTO public.profiles (id, name, email, role, status)
   VALUES (

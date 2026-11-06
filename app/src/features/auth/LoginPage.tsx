@@ -10,7 +10,7 @@ import { APP_NAME, APP_VERSION } from '../../config/version';
 
 type ModoTela = 'login' | 'cadastro' | 'recuperar';
 
-const INITIAL_ADMIN_EMAIL = 'netootavio204@gmail.com';
+const INITIAL_ADMIN_EMAIL = (import.meta.env.VITE_INITIAL_ADMIN_EMAIL || '').trim().toLowerCase();
 
 export const LoginPage: React.FC = () => {
   const { configApp, recarregarPerfilEConfig } = useAuth();
@@ -76,7 +76,7 @@ export const LoginPage: React.FC = () => {
           password: senhaFinal,
         });
 
-        // Se for o primeiro acesso do e-mail Admin (netootavio204@gmail.com) direto na aba Entrar,
+        // Se for o primeiro acesso do e-mail Admin inicial configurado no ambiente direto na aba Entrar,
         // cria automaticamente a conta Admin com a senha informada e já entra!
         if (error && emailLimpo === INITIAL_ADMIN_EMAIL) {
           const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
