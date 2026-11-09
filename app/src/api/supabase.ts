@@ -305,7 +305,7 @@ export async function fetchCategories(): Promise<Category[]> {
 export async function createCategory(payload: {
   user_id: string;
   name: string;
-  icon: CategoryIconName;
+  icon: CategoryIconName | string;
   color: string;
 }): Promise<Category> {
   const { data, error } = await supabase
@@ -327,7 +327,7 @@ export async function updateCategory(
   id: string,
   updates: Partial<{
     name: string;
-    icon: CategoryIconName;
+    icon: CategoryIconName | string;
     color: string;
     archived: boolean;
   }>
@@ -401,7 +401,7 @@ export async function fetchIncomeSources(): Promise<IncomeSource[]> {
 export async function createIncomeSource(payload: {
   user_id: string;
   name: string;
-  icon: CategoryIconName;
+  icon: CategoryIconName | string;
   color: string;
   counts_as_earning: boolean;
   default_payment_method_id: string | null;
@@ -429,7 +429,7 @@ export async function updateIncomeSource(
   id: string,
   updates: Partial<{
     name: string;
-    icon: CategoryIconName;
+    icon: CategoryIconName | string;
     color: string;
     counts_as_earning: boolean;
     default_payment_method_id: string | null;
@@ -555,6 +555,7 @@ export async function createTransaction(payload: {
   to_account_id?: string | null;
   payment_method_id?: string | null;
   category_id?: string | null;
+  expense_item_id?: string | null;
   income_source_id?: string | null;
   gross_cents: number;
   fee_cents?: number;
@@ -577,6 +578,8 @@ export async function createTransaction(payload: {
         payload.kind === 'income' ? payload.payment_method_id || null : null,
       category_id:
         payload.kind === 'expense' ? payload.category_id || null : null,
+      expense_item_id:
+        payload.kind === 'expense' ? payload.expense_item_id || null : null,
       income_source_id:
         payload.kind !== 'transfer' ? payload.income_source_id || null : null,
       gross_cents: gross,
@@ -623,6 +626,7 @@ export async function updateTransaction(
     to_account_id?: string | null;
     payment_method_id?: string | null;
     category_id?: string | null;
+    expense_item_id?: string | null;
     income_source_id?: string | null;
     gross_cents: number;
     fee_cents?: number;
@@ -644,6 +648,8 @@ export async function updateTransaction(
         payload.kind === 'income' ? payload.payment_method_id || null : null,
       category_id:
         payload.kind === 'expense' ? payload.category_id || null : null,
+      expense_item_id:
+        payload.kind === 'expense' ? payload.expense_item_id || null : null,
       income_source_id:
         payload.kind !== 'transfer' ? payload.income_source_id || null : null,
       gross_cents: gross,

@@ -88,7 +88,7 @@ export interface Category {
   id: string;
   user_id: string;
   name: string;
-  icon: CategoryIconName;
+  icon: CategoryIconName | string;
   color: string;
   archived: boolean;
   created_at: string;
@@ -99,7 +99,7 @@ export interface IncomeSource {
   id: string;
   user_id: string;
   name: string;
-  icon: CategoryIconName;
+  icon: CategoryIconName | string;
   color: string;
   counts_as_earning: boolean;
   default_payment_method_id: string | null;

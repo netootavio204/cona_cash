@@ -85,64 +85,93 @@
 
 
 /* ==============================================================================
- * TEMA CLARO (LIGHT MODE) — FASE 6
+ * TEMA CLARO REFEITO (LIGHT MODE) — FASE 8 (PRD 7.5)
+ * Fundo: #FAF7F2, Cartões: #FFFFFF com borda #E8DFD3 e sombra suave
+ * Texto principal: #1A1410, Secundário: #6B5E52
+ * Destaque Laranja: #E8620A, Positivo: #0F9D6B, Negativo: #D62F25, Alerta: #B7791F
+ * Contraste garantido AA (4,5:1)
  * ============================================================================== */
 html.light,
 html.light body {
-  background-color: #F8F9FA !important;
-  color: #1E293B !important;
+  background-color: #FAF7F2 !important;
+  color: #1A1410 !important;
   color-scheme: light;
 }
 
 html.light .bg-\[\#0B0B0D\] {
-  background-color: #F8F9FA !important;
+  background-color: #FAF7F2 !important;
 }
 
 html.light .bg-\[\#141418\] {
   background-color: #FFFFFF !important;
+  box-shadow: 0 4px 16px rgba(26, 20, 16, 0.05);
 }
 
 html.light .bg-\[\#141419\] {
-  background-color: #F1F5F9 !important;
+  background-color: #F3EFEA !important;
+}
+
+html.light .bg-\[\#16161D\] {
+  background-color: #FFFFFF !important;
+  box-shadow: 0 10px 25px rgba(26, 20, 16, 0.1);
 }
 
 html.light .bg-\[\#1B1B22\] {
-  background-color: #E2E8F0 !important;
+  background-color: #ECE5DC !important;
 }
 
 html.light .border-\[\#262630\] {
-  border-color: #CBD5E1 !important;
+  border-color: #E8DFD3 !important;
 }
 
 html.light .border-\[\#262630\]\/40,
 html.light .border-\[\#262630\]\/50,
-html.light .border-\[\#262630\]\/60 {
-  border-color: rgba(203, 213, 225, 0.6) !important;
+html.light .border-\[\#262630\]\/60,
+html.light .border-\[\#262630\]\/70 {
+  border-color: #E8DFD3 !important;
+}
+
+html.light .border-white\/10,
+html.light .border-white\/15,
+html.light .border-white\/20 {
+  border-color: #E8DFD3 !important;
+}
+
+html.light .bg-white\/5 {
+  background-color: #F3EFEA !important;
+}
+
+html.light .bg-white\/10 {
+  background-color: #EAE3D8 !important;
 }
 
 html.light .text-white {
-  color: #0F172A !important;
+  color: #1A1410 !important;
 }
 
 html.light .text-\[\#F5F5F7\] {
-  color: #1E293B !important;
+  color: #1A1410 !important;
 }
 
 html.light .text-\[\#9A9AA6\] {
-  color: #64748B !important;
+  color: #6B5E52 !important;
 }
 
 html.light header {
-  background-color: rgba(248, 249, 250, 0.9) !important;
-  border-color: #E2E8F0 !important;
+  background-color: rgba(250, 247, 242, 0.95) !important;
+  border-color: #E8DFD3 !important;
 }
 
 html.light aside {
-  background-color: rgba(255, 255, 255, 0.96) !important;
-  border-color: #E2E8F0 !important;
+  background-color: rgba(255, 255, 255, 0.98) !important;
+  border-color: #E8DFD3 !important;
 }
 
 html.light nav {
-  background-color: rgba(255, 255, 255, 0.96) !important;
-  border-color: #E2E8F0 !important;
+  background-color: rgba(255, 255, 255, 0.98) !important;
+  border-color: #E8DFD3 !important;
+}
+
+html.light .cona-glow-border {
+  background: linear-gradient(135deg, rgba(232, 98, 10, 0.45), rgba(255, 201, 64, 0.35), rgba(232, 223, 211, 0.9), rgba(214, 47, 37, 0.35)) !important;
 }

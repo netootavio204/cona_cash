@@ -12,6 +12,7 @@ import {
   type Account,
   type AuditLogEntry,
   type Category,
+  type ExpenseItem,
   type IncomeSource,
   type PaymentMethod,
   type Transaction,
@@ -29,6 +30,7 @@ import {
   createIncomeBatch,
   createTransaction,
   fetchTransactionAuditLog,
+  getOrCreateExpenseItem,
   updateTransaction,
 } from '../../api/supabase';
 import { Modal } from '../../components/ui/Modal';
@@ -37,6 +39,7 @@ import { CampoMoeda } from '../../components/ui/CampoMoeda';
 import { Botao } from '../../components/ui/Botao';
 import { ValorMoeda } from '../../components/ui/ValorMoeda';
 import { CategoryIcon } from '../../components/ui/CategoryIcon';
+import { ExpenseItemAutocomplete } from '../../components/ui/ExpenseItemAutocomplete';
 
 // ============================================================================
 // 1. MODAL DE LANÇAMENTO INDIVIDUAL (ENTRADA RÁPIDA, SAÍDA, TRANSFERÊNCIA + EDIÇÃO)
@@ -86,6 +89,8 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
   const [fonteId, setFonteId] = useState<string>('');
   const [formaId, setFormaId] = useState<string>('');
   const [categoriaId, setCategoriaId] = useState<string>('');
+  const [itemGasto, setItemGasto] = useState<ExpenseItem | null>(null);
+  const [novoItemNome, setNovoItemNome] = useState<string>('');
   const [contaId, setContaId] = useState<string>('');
   const [contaDestinoId, setContaDestinoId] = useState<string>('');
 
@@ -108,6 +113,8 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
       setCategoriaId(lancamentoEditando.category_id || '');
       setContaId(lancamentoEditando.account_id);
       setContaDestinoId(lancamentoEditando.to_account_id || '');
+      setItemGasto(null);
+      setNovoItemNome('');
       setObservacao(lancamentoEditando.note || '');
       setEscolherDataHora(true);
       setDataHoraLocal(
@@ -118,6 +125,8 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
       setBrutoCentavos(0);
       setTaxaCentavos(0);
       setTaxaManual(false);
+      setItemGasto(null);
+      setNovoItemNome('');
       setObservacao('');
       setEscolherDataHora(false);
       setDataHoraLocal(toSaoPauloDateTimeLocal());
@@ -155,6 +164,24 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
       setContaDestinoId(segundaConta);
     }
   }, [aberto, lancamentoEditando, tipoInicial]);
+
+  // Ao selecionar um item de saída: preenche categoria, último valor e conta padrão
+  const handleSelecionarItemGasto = (item: ExpenseItem | null, novoNome?: string) => {
+    setItemGasto(item);
+    setNovoItemNome(novoNome || '');
+
+    if (item) {
+      if (item.default_category_id) {
+        setCategoriaId(item.default_category_id);
+      }
+      if (item.default_account_id) {
+        setContaId(item.default_account_id);
+      }
+      if (item.default_amount_cents && item.default_amount_cents > 0) {
+        setBrutoCentavos(item.default_amount_cents);
+      }
+    }
+  };
 
   const selecionarFonteRenda = (src: IncomeSource) => {
     setFonteId(src.id);
@@ -252,6 +279,18 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
 
     setSalvando(true);
     try {
+      // Se for saída e tiver um item novo a ser criado
+      let finalItemId = itemGasto?.id || null;
+      if (tipo === 'expense' && !finalItemId && novoItemNome.trim()) {
+        const created = await getOrCreateExpenseItem({
+          name: novoItemNome.trim(),
+          category_id: categoriaId || null,
+          account_id: contaId || null,
+          amount_cents: brutoCentavos,
+        });
+        if (created?.id) finalItemId = created.id;
+      }
+
       if (lancamentoEditando) {
         await updateTransaction(lancamentoEditando.id, {
           kind: tipo,
@@ -260,6 +299,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
           to_account_id: tipo === 'transfer' ? contaDestinoId : null,
           payment_method_id: tipo === 'income' ? formaId || null : null,
           category_id: tipo === 'expense' ? categoriaId || null : null,
+          expense_item_id: tipo === 'expense' ? finalItemId : null,
           income_source_id: tipo !== 'transfer' ? fonteId || null : null,
           gross_cents: brutoCentavos,
           fee_cents: tipo === 'income' ? taxaCentavos : 0,
@@ -275,6 +315,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
           to_account_id: tipo === 'transfer' ? contaDestinoId : null,
           payment_method_id: tipo === 'income' ? formaId || null : null,
           category_id: tipo === 'expense' ? categoriaId || null : null,
+          expense_item_id: tipo === 'expense' ? finalItemId : null,
           income_source_id: tipo !== 'transfer' ? fonteId || null : null,
           gross_cents: brutoCentavos,
           fee_cents: tipo === 'income' ? taxaCentavos : 0,
@@ -511,9 +552,15 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
           </>
         )}
 
-        {/* 2º CAMPO (SE SAÍDA): CATEGORIA + LIGAR A UMA FONTE (OPCIONAL) */}
+        {/* 2º CAMPO (SE SAÍDA): ITEM COMPRADO (AUTOCOMPLETE) + CATEGORIA + LIGAR A UMA FONTE */}
         {tipo === 'expense' && (
           <>
+            <ExpenseItemAutocomplete
+              value={itemGasto?.id || ''}
+              selectedItem={itemGasto}
+              onSelectItem={handleSelecionarItemGasto}
+            />
+
             <div className="flex flex-col gap-1.5 min-w-0">
               <span className="text-xs sm:text-sm font-medium text-[#F5F5F7] truncate">
                 2. Categoria do gasto

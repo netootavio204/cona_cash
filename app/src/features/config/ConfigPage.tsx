@@ -80,10 +80,9 @@ import { Campo } from '../../components/ui/Campo';
 import { CampoMoeda } from '../../components/ui/CampoMoeda';
 import { Modal } from '../../components/ui/Modal';
 import { ValorMoeda } from '../../components/ui/ValorMoeda';
-import {
-  CategoryIcon,
-  CATEGORY_ICONS_LIST,
-} from '../../components/ui/CategoryIcon';
+import { IconPicker } from '../../components/ui/IconPicker';
+import { suggestIconByName, AppIcon } from '../../components/ui/iconLibrary';
+import { CategoryIcon } from '../../components/ui/CategoryIcon';
 import { APP_NAME, APP_VERSION } from '../../config/version';
 
 export type SecaoConfig =
@@ -110,7 +109,7 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
   const { perfil, usuario, configApp, recarregarPerfilEConfig } = useAuth();
   const isAdmin = perfil?.role === 'admin' && perfil?.status === 'approved';
 
-  const { theme, setTheme } = useTheme();
+  const { theme, themePreference, setThemePreference } = useTheme();
   const [exportandoDados, setExportandoDados] = useState(false);
 
   const [secao, setSecao] = useState<SecaoConfig>('contas');
@@ -431,7 +430,7 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
   const [modalCatAberto, setModalCatAberto] = useState(false);
   const [catEditando, setCatEditando] = useState<Category | null>(null);
   const [catNome, setCatNome] = useState('');
-  const [catIcone, setCatIcone] = useState<CategoryIconName>('fuel');
+  const [catIcone, setCatIcone] = useState<string>('fuel');
   const [catCor, setCatCor] = useState('#FF7A1A');
   const [salvandoCat, setSalvandoCat] = useState(false);
 
@@ -543,7 +542,7 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
   const [modalFonteAberto, setModalFonteAberto] = useState(false);
   const [fonteEditando, setFonteEditando] = useState<IncomeSource | null>(null);
   const [fonteNome, setFonteNome] = useState('');
-  const [fonteIcone, setFonteIcone] = useState<CategoryIconName>('shopping-bag');
+  const [fonteIcone, setFonteIcone] = useState<string>('shopping-bag');
   const [fonteCor, setFonteCor] = useState('#FF7A1A');
   const [fonteContaComoGanho, setFonteContaComoGanho] = useState(true);
   const [fonteFormaId, setFonteFormaId] = useState<string>('');
@@ -1410,7 +1409,7 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
                 placeholder="Ex.: Octavio"
               />
 
-              {/* Tema Claro / Escuro (Fase 6) */}
+              {/* Tema Claro / Escuro / Automático (Fase 8 — PRD 7.5) */}
               <div className="p-3.5 rounded-xl bg-[#0B0B0D] border border-[#262630] flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-10 h-10 rounded-xl bg-[#FF7A1A]/15 text-[#FF7A1A] flex items-center justify-center shrink-0">
@@ -1421,18 +1420,35 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
                       Tema da Interface
                     </p>
                     <p className="text-xs text-[#9A9AA6] truncate">
-                      {theme === 'dark' ? 'Modo Escuro Oficial (Dark)' : 'Modo Claro (Light)'}
+                      {themePreference === 'auto'
+                        ? `Automático (detectado: ${theme === 'dark' ? 'Escuro' : 'Claro'})`
+                        : themePreference === 'dark'
+                          ? 'Modo Escuro Oficial (Dark)'
+                          : 'Modo Claro Refeito (Light)'}
                     </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-1.5 bg-[#141418] p-1 rounded-xl border border-[#262630] shrink-0">
+                <div className="grid grid-cols-3 gap-1.5 bg-[#141418] p-1 rounded-xl border border-[#262630] shrink-0">
                   <button
                     type="button"
-                    onClick={() => setTheme('dark')}
+                    onClick={() => setThemePreference('auto')}
                     className={[
-                      'min-h-[38px] px-3 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5',
-                      theme === 'dark'
+                      'min-h-[38px] px-2.5 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1',
+                      themePreference === 'auto'
+                        ? 'bg-[#FF7A1A] text-[#0B0B0D]'
+                        : 'text-[#9A9AA6] hover:text-white',
+                    ].join(' ')}
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Auto</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setThemePreference('dark')}
+                    className={[
+                      'min-h-[38px] px-2.5 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1',
+                      themePreference === 'dark'
                         ? 'bg-[#FF7A1A] text-[#0B0B0D]'
                         : 'text-[#9A9AA6] hover:text-white',
                     ].join(' ')}
@@ -1442,10 +1458,10 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setTheme('light')}
+                    onClick={() => setThemePreference('light')}
                     className={[
-                      'min-h-[38px] px-3 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5',
-                      theme === 'light'
+                      'min-h-[38px] px-2.5 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1',
+                      themePreference === 'light'
                         ? 'bg-[#FF7A1A] text-[#0B0B0D]'
                         : 'text-[#9A9AA6] hover:text-white',
                     ].join(' ')}
@@ -2050,27 +2066,11 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
           />
 
           <div className="flex flex-col gap-1.5 min-w-0">
-            <span className="text-xs sm:text-sm font-medium text-[#F5F5F7]">
-              Ícone
-            </span>
-            <div className="grid grid-cols-4 gap-2">
-              {CATEGORY_ICONS_LIST.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setCatIcone(item.id)}
-                  className={[
-                    'min-h-[48px] p-2 rounded-xl border flex flex-col items-center justify-center gap-1 text-[10px] transition-all min-w-0 overflow-hidden',
-                    catIcone === item.id
-                      ? 'bg-[#FF7A1A]/20 border-[#FF7A1A] text-white font-bold'
-                      : 'bg-[#0B0B0D] border-[#262630] text-[#9A9AA6]',
-                  ].join(' ')}
-                >
-                  <CategoryIcon name={item.id} className="w-4 h-4 shrink-0" />
-                  <span className="truncate w-full text-center">{item.label}</span>
-                </button>
-              ))}
-            </div>
+            <IconPicker
+              value={catIcone}
+              onChange={setCatIcone}
+              label="Ícone da Categoria"
+            />
           </div>
 
           <div className="flex flex-col gap-1.5 min-w-0">
@@ -2218,27 +2218,11 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
           </div>
 
           <div className="flex flex-col gap-1.5 min-w-0">
-            <span className="text-xs sm:text-sm font-medium text-[#F5F5F7]">
-              Ícone da fonte
-            </span>
-            <div className="grid grid-cols-4 gap-2">
-              {CATEGORY_ICONS_LIST.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setFonteIcone(item.id)}
-                  className={[
-                    'min-h-[48px] p-2 rounded-xl border flex flex-col items-center justify-center gap-1 text-[10px] transition-all min-w-0 overflow-hidden',
-                    fonteIcone === item.id
-                      ? 'bg-[#FF7A1A]/20 border-[#FF7A1A] text-white font-bold'
-                      : 'bg-[#0B0B0D] border-[#262630] text-[#9A9AA6]',
-                  ].join(' ')}
-                >
-                  <CategoryIcon name={item.id} className="w-4 h-4 shrink-0" />
-                  <span className="truncate w-full text-center">{item.label}</span>
-                </button>
-              ))}
-            </div>
+            <IconPicker
+              value={fonteIcone}
+              onChange={setFonteIcone}
+              label="Ícone da Fonte"
+            />
           </div>
 
           <div className="flex flex-col gap-1.5 min-w-0">
