@@ -8,6 +8,7 @@ import {
   type AuditLogEntry,
   type Category,
   type CategoryIconName,
+  type DailyBatch,
   type IncomeSource,
   type PaymentMethod,
   type Profile,
@@ -858,4 +859,99 @@ export async function ensureMyGoals(): Promise<void> {
   if (error) {
     console.warn('Erro ao verificar seed de metas:', error);
   }
+}
+
+// ============================================================================
+// FASE 7: LOTE DO DIA EM DUAS ETAPAS (v1.2.0)
+// ============================================================================
+
+export async function fetchSystemPendingAccount(): Promise<Account | null> {
+  const { data, error } = await supabase
+    .from('accounts')
+    .select('*')
+    .eq('is_system', true)
+    .eq('system_kind', 'pending')
+    .maybeSingle();
+
+  if (error) throw error;
+  return data as Account | null;
+}
+
+export async function createDailyBatchTwoStages(payload: {
+  work_date: string;
+  note: string;
+  lines: {
+    gross_cents: number;
+    income_source_id: string | null;
+    note?: string;
+  }[];
+}): Promise<string> {
+  const { data, error } = await supabase.rpc('create_daily_batch', {
+    p_work_date: payload.work_date,
+    p_note: payload.note.trim(),
+    p_lines: payload.lines,
+  });
+
+  if (error) throw error;
+  return data as string;
+}
+
+export async function distributeBatchLine(payload: {
+  line_id: string;
+  parts: {
+    payment_method_id: string;
+    account_id: string;
+    gross_cents: number;
+    fee_cents: number;
+    net_cents: number;
+    note?: string;
+  }[];
+}): Promise<{
+  success: boolean;
+  line_id: string;
+  distributed_now_cents: number;
+  total_distributed_cents: number;
+  remaining_cents: number;
+  parts_count: number;
+}> {
+  const { data, error } = await supabase.rpc('distribute_batch_line', {
+    p_line_id: payload.line_id,
+    p_parts: payload.parts,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function undistributePart(partId: string): Promise<{
+  success: boolean;
+  undone_part_id: string;
+  parent_line_id: string;
+  restored_gross_cents: number;
+}> {
+  const { data, error } = await supabase.rpc('undistribute_part', {
+    p_part_id: partId,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchDailyBatches(
+  startDate?: string,
+  endDate?: string
+): Promise<DailyBatch[]> {
+  const { data, error } = await supabase.rpc('get_daily_batches', {
+    p_start_date: startDate || null,
+    p_end_date: endDate || null,
+  });
+
+  if (error) throw error;
+  return (data || []) as DailyBatch[];
+}
+
+export async function fetchPendingDistributionTotal(): Promise<number> {
+  const balances = await fetchAccountBalances();
+  const pendingAcc = balances.find((b) => b.is_system && b.system_kind === 'pending');
+  return pendingAcc ? pendingAcc.current_balance_cents : 0;
 }

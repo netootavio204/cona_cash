@@ -69,8 +69,18 @@ describe('Formatação de moeda em centavos e taxas (PRD 5, 7.1, Fase 2, Fase 3 
     expect(res.saidasCents).toBe(2000); // R$ 20,00 (Transferência ignorada)
   });
 
-  it('mantém versão sincronizada v1.0.0 beta / 005_goals', () => {
-    expect(APP_VERSION).toBe('v1.0.0 beta');
-    expect(SCHEMA_VERSION).toBe('005_goals');
+  it('calcula taxa e líquido conforme cenário Fase 7 (R$ 120,00 a 3,49% = R$ 4,19)', () => {
+    const grossCents = 12000; // R$ 120,00
+    const feePercent = 3.49;
+    const feeCents = Math.round((grossCents * feePercent) / 100);
+    const netCents = grossCents - feeCents;
+
+    expect(feeCents).toBe(419); // R$ 4,19
+    expect(netCents).toBe(11581); // R$ 115,81
+  });
+
+  it('mantém versão sincronizada v1.2.0-a / 006_daily_batches_two_stages', () => {
+    expect(APP_VERSION).toBe('v1.2.0-a');
+    expect(SCHEMA_VERSION).toBe('006_daily_batches_two_stages');
   });
 });

@@ -34,6 +34,8 @@ export interface Account {
   initial_balance_cents: number;
   color: string;
   archived: boolean;
+  is_system?: boolean;
+  system_kind?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -44,6 +46,8 @@ export interface AccountBalance {
   account_type: AccountType;
   account_color: string;
   archived: boolean;
+  is_system?: boolean;
+  system_kind?: string | null;
   initial_balance_cents: number;
   income_net_cents: number;
   expense_cents: number;
@@ -118,9 +122,56 @@ export interface Transaction {
   net_cents: number;
   note: string;
   batch_id: string | null;
+  parent_id?: string | null;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export type DailyBatchStatus = 'pending' | 'partial' | 'distributed';
+
+export interface DailyBatchPart {
+  id: string;
+  gross_cents: number;
+  fee_cents: number;
+  net_cents: number;
+  payment_method_id: string;
+  payment_method_name: string;
+  account_id: string;
+  account_name: string;
+  account_color: string;
+  note: string | null;
+  created_at: string;
+}
+
+export interface DailyBatchLine {
+  id: string;
+  occurred_at: string;
+  gross_cents: number;
+  note: string | null;
+  source: {
+    id: string;
+    name: string;
+    color: string;
+    icon: string;
+  } | null;
+  distributed_cents: number;
+  remaining_cents: number;
+  status: DailyBatchStatus;
+  parts: DailyBatchPart[];
+}
+
+export interface DailyBatch {
+  batch_id: string;
+  work_date: string;
+  batch_note: string | null;
+  created_at: string;
+  updated_at: string;
+  total_gross_cents: number;
+  total_distributed_cents: number;
+  total_remaining_cents: number;
+  status: DailyBatchStatus;
+  lines: DailyBatchLine[];
 }
 
 export interface AuditLogEntry {
