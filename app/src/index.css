@@ -86,7 +86,8 @@
 
 /* ==============================================================================
  * TEMA CLARO REFEITO (LIGHT MODE) — FASE 8 (PRD 7.5)
- * Fundo: #FAF7F2, Cartões: #FFFFFF com borda #E8DFD3 e sombra suave
+ * Fundo: #FAF7F2, Cartões: #FFFFFF com borda #E2D9C8 e sombra suave
+ * Sub-superfícies / Botões secundários: #F4EFE6 e #EFE9DF
  * Texto principal: #1A1410, Secundário: #6B5E52
  * Destaque Laranja: #E8620A, Positivo: #0F9D6B, Negativo: #D62F25, Alerta: #B7791F
  * Contraste garantido AA (4,5:1)
@@ -98,46 +99,86 @@ html.light body {
   color-scheme: light;
 }
 
+/* Fundo base da página */
 html.light .bg-\[\#0B0B0D\] {
   background-color: #FAF7F2 !important;
 }
 
-html.light .bg-\[\#141418\] {
-  background-color: #FFFFFF !important;
-  box-shadow: 0 4px 16px rgba(26, 20, 16, 0.05);
-}
-
-html.light .bg-\[\#141419\] {
-  background-color: #F3EFEA !important;
-}
-
+/* Cartões principais, modais e superfícies elevadas (incluindo opacidades /85 e /95) */
+html.light .bg-\[\#141418\],
+html.light .bg-\[\#141418\]\/85,
+html.light .bg-\[\#141418\]\/95,
 html.light .bg-\[\#16161D\] {
   background-color: #FFFFFF !important;
-  box-shadow: 0 10px 25px rgba(26, 20, 16, 0.1);
+  box-shadow: 0 4px 16px rgba(26, 20, 16, 0.06) !important;
 }
 
+/* Sub-blocos internos, caixas recuadas e rodapé da sidebar */
+html.light .bg-\[\#0B0B0D\]\/50,
+html.light .bg-\[\#0B0B0D\]\/60,
+html.light .bg-\[\#0B0B0D\]\/70,
+html.light .bg-\[\#0B0B0D\]\/80,
+html.light .bg-\[\#0B0B0D\]\/85,
+html.light .bg-\[\#0B0B0D\]\/90,
+html.light .bg-\[\#141419\],
+html.light .bg-\[\#141419\]\/90,
+html.light .cona-glow-border .bg-\[\#0B0B0D\],
+html.light .bg-\[\#141418\] .bg-\[\#0B0B0D\],
+html.light .bg-\[\#141418\]\/85 .bg-\[\#0B0B0D\],
+html.light .bg-\[\#141418\]\/95 .bg-\[\#0B0B0D\],
+html.light aside .bg-\[\#0B0B0D\] {
+  background-color: #F4EFE6 !important;
+}
+
+/* Botões secundários (<Botao variante="secundario">), pílulas, trilhas e snackbar */
+html.light .bg-\[\#18181E\],
+html.light .bg-\[\#18181E\]\/95,
 html.light .bg-\[\#1B1B22\] {
-  background-color: #ECE5DC !important;
+  background-color: #EFE9DF !important;
+  color: #1A1410 !important;
+  border-color: #D8CFC2 !important;
 }
 
-html.light .border-\[\#262630\] {
-  border-color: #E8DFD3 !important;
+html.light .bg-\[\#1E1E26\],
+html.light .bg-\[\#262630\],
+html.light .bg-\[\#323242\],
+html.light .hover\:bg-\[\#1E1E26\]:hover,
+html.light .hover\:bg-\[\#323242\]:hover {
+  background-color: #E3DAD0 !important;
+  color: #1A1410 !important;
 }
 
+/* Campos de formulário (inputs, selects, textareas) com fundo branco nítido e borda visível */
+html.light input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html.light select,
+html.light textarea {
+  background-color: #FFFFFF !important;
+  color: #1A1410 !important;
+  border-color: #D6C7B2 !important;
+}
+
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: #8C7D70 !important;
+}
+
+/* Bordas e divisores */
+html.light .border-\[\#262630\],
 html.light .border-\[\#262630\]\/40,
 html.light .border-\[\#262630\]\/50,
 html.light .border-\[\#262630\]\/60,
-html.light .border-\[\#262630\]\/70 {
-  border-color: #E8DFD3 !important;
-}
-
+html.light .border-\[\#262630\]\/70,
+html.light .border-\[\#262630\]\/80,
+html.light .border-\[\#3E3E4E\],
 html.light .border-white\/10,
 html.light .border-white\/15,
-html.light .border-white\/20 {
-  border-color: #E8DFD3 !important;
+html.light .border-white\/20,
+html.light .divide-\[\#262630\]\/60 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #E2D9C8 !important;
 }
 
-html.light .bg-white\/5 {
+html.light .bg-white\/5,
+html.light .hover\:bg-white\/5:hover {
   background-color: #F3EFEA !important;
 }
 
@@ -145,33 +186,72 @@ html.light .bg-white\/10 {
   background-color: #EAE3D8 !important;
 }
 
-html.light .text-white {
+/* Textos principais e secundários */
+html.light .text-white,
+html.light .text-white\/90,
+html.light .text-\[\#F5F5F7\],
+html.light .text-\[\#F5F5F7\]\/80,
+html.light .text-\[\#F5F5F7\]\/85,
+html.light .text-\[\#F5F5F7\]\/90,
+html.light .hover\:text-white:hover,
+html.light .hover\:text-\[\#F5F5F7\]:hover {
   color: #1A1410 !important;
 }
 
-html.light .text-\[\#F5F5F7\] {
-  color: #1A1410 !important;
+/* Preservar texto branco em botões/badges de fundo sólido vermelho ou verde escuro */
+html.light .bg-\[\#D62F25\].text-white,
+html.light .bg-\[\#FF3B30\].text-white,
+html.light .bg-\[\#0F9D6B\].text-white {
+  color: #FFFFFF !important;
 }
 
-html.light .text-\[\#9A9AA6\] {
+html.light .text-\[\#9A9AA6\],
+html.light .text-\[\#9A9AA6\]\/80,
+html.light .text-\[\#9A9AA6\]\/70,
+html.light .text-\[\#9A9AA6\]\/60,
+html.light .text-\[\#9A9AA6\]\/50,
+html.light .text-\[\#9A9AA6\]\/40 {
   color: #6B5E52 !important;
+}
+
+/* Cores semânticas com contraste AA garantido sobre fundo claro */
+html.light .text-\[\#2EE59D\] {
+  color: #0F9D6B !important;
+}
+
+html.light .text-\[\#FFC940\] {
+  color: #B7791F !important;
+}
+
+html.light .text-\[\#FF7A1A\] {
+  color: #E8620A !important;
+}
+
+html.light .text-\[\#FF3B30\] {
+  color: #D62F25 !important;
+}
+
+/* Gradientes de banners que terminam em tom escuro */
+html.light .to-\[\#141418\],
+html.light .to-\[\#141419\] {
+  --tw-gradient-to: #FFFFFF var(--tw-gradient-to-position) !important;
 }
 
 html.light header {
   background-color: rgba(250, 247, 242, 0.95) !important;
-  border-color: #E8DFD3 !important;
+  border-color: #E2D9C8 !important;
 }
 
 html.light aside {
   background-color: rgba(255, 255, 255, 0.98) !important;
-  border-color: #E8DFD3 !important;
+  border-color: #E2D9C8 !important;
 }
 
 html.light nav {
   background-color: rgba(255, 255, 255, 0.98) !important;
-  border-color: #E8DFD3 !important;
+  border-color: #E2D9C8 !important;
 }
 
 html.light .cona-glow-border {
-  background: linear-gradient(135deg, rgba(232, 98, 10, 0.45), rgba(255, 201, 64, 0.35), rgba(232, 223, 211, 0.9), rgba(214, 47, 37, 0.35)) !important;
+  background: linear-gradient(135deg, rgba(232, 98, 10, 0.45), rgba(255, 201, 64, 0.35), rgba(226, 217, 200, 0.9), rgba(214, 47, 37, 0.35)) !important;
 }
