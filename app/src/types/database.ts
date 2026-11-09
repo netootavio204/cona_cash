@@ -33,6 +33,7 @@ export interface Account {
   type: AccountType;
   initial_balance_cents: number;
   color: string;
+  icon?: string | null;
   archived: boolean;
   is_system?: boolean;
   system_kind?: string | null;
@@ -62,6 +63,7 @@ export interface PaymentMethod {
   name: string;
   default_account_id: string | null;
   fee_percent: number;
+  icon?: string | null;
   archived: boolean;
   created_at: string;
   updated_at: string;
@@ -121,6 +123,7 @@ export interface Transaction {
   fee_cents: number;
   net_cents: number;
   note: string;
+  expense_item_id?: string | null;
   batch_id: string | null;
   parent_id?: string | null;
   deleted_at: string | null;
@@ -328,3 +331,68 @@ export interface GoalProgress {
   period_key: string;
   status: 'ok' | 'warning' | 'danger' | 'achieved';
 }
+
+// ==============================================================================
+// ITENS DE SAÍDA (Fase 8)
+// ==============================================================================
+export interface ExpenseItem {
+  id: string;
+  user_id: string;
+  name: string;
+  normalized_name: string;
+  icon?: string | null;
+  default_category_id?: string | null;
+  default_account_id?: string | null;
+  default_amount_cents: number;
+  use_count: number;
+  last_used_at?: string | null;
+  archived: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExpenseItemReportRow {
+  item_id: string;
+  item_name: string;
+  item_icon: string | null;
+  category_id: string | null;
+  category_name: string | null;
+  category_color: string | null;
+  category_icon: string | null;
+  total_cents: number;
+  count: number;
+  average_cents: number;
+  last_used_at: string | null;
+  percentage: number;
+}
+
+export interface ExpenseItemHistoryMonth {
+  month: string; // YYYY-MM
+  total_cents: number;
+  count: number;
+}
+
+export interface ExpenseItemRecentTransaction {
+  id: string;
+  occurred_at: string;
+  gross_cents: number;
+  note: string | null;
+  account_name: string;
+  category_name: string;
+}
+
+export interface ExpenseItemDetailReport {
+  item: ExpenseItem;
+  totals: {
+    total_cents: number;
+    count: number;
+    average_cents: number;
+    min_cents: number;
+    max_cents: number;
+    first_purchase_at: string | null;
+    last_purchase_at: string | null;
+  };
+  monthly_history: ExpenseItemHistoryMonth[];
+  recent_transactions: ExpenseItemRecentTransaction[];
+}
+

@@ -9,6 +9,9 @@ import {
   type Category,
   type CategoryIconName,
   type DailyBatch,
+  type ExpenseItem,
+  type ExpenseItemDetailReport,
+  type ExpenseItemReportRow,
   type IncomeSource,
   type PaymentMethod,
   type Profile,
@@ -955,3 +958,98 @@ export async function fetchPendingDistributionTotal(): Promise<number> {
   const pendingAcc = balances.find((b) => b.is_system && b.system_kind === 'pending');
   return pendingAcc ? pendingAcc.current_balance_cents : 0;
 }
+
+// ============================================================================
+// ITENS DE SAÍDA (FASE 8)
+// ============================================================================
+
+export async function fetchExpenseItems(includeArchived = false): Promise<ExpenseItem[]> {
+  let query = supabase
+    .from('expense_items')
+    .select('*')
+    .order('use_count', { ascending: false })
+    .order('last_used_at', { ascending: false, nullsFirst: false });
+
+  if (!includeArchived) {
+    query = query.eq('archived', false);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data || []) as ExpenseItem[];
+}
+
+export async function getOrCreateExpenseItem(payload: {
+  name: string;
+  category_id?: string | null;
+  account_id?: string | null;
+  amount_cents?: number | null;
+  icon?: string | null;
+}): Promise<ExpenseItem> {
+  const { data, error } = await supabase.rpc('get_or_create_expense_item', {
+    p_name: payload.name,
+    p_category_id: payload.category_id || null,
+    p_account_id: payload.account_id || null,
+    p_amount_cents: payload.amount_cents != null ? payload.amount_cents : null,
+    p_icon: payload.icon || null,
+  });
+
+  if (error) throw error;
+  return data as ExpenseItem;
+}
+
+export async function updateExpenseItem(
+  id: string,
+  updates: Partial<Pick<ExpenseItem, 'name' | 'icon' | 'default_category_id' | 'default_account_id' | 'default_amount_cents' | 'archived'>>
+): Promise<ExpenseItem> {
+  const { data, error } = await supabase
+    .from('expense_items')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as ExpenseItem;
+}
+
+export async function mergeExpenseItems(sourceItemId: string, targetItemId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('merge_expense_items', {
+    p_source_id: sourceItemId,
+    p_target_id: targetItemId,
+  });
+
+  if (error) throw error;
+  return !!data;
+}
+
+export async function fetchExpensesByItemReport(
+  startDate?: string,
+  endDate?: string,
+  limitCount = 20
+): Promise<ExpenseItemReportRow[]> {
+  const { data, error } = await supabase.rpc('report_expenses_by_item', {
+    p_start_date: startDate || null,
+    p_end_date: endDate || null,
+    p_limit: limitCount,
+  });
+
+  if (error) throw error;
+  return (data || []) as ExpenseItemReportRow[];
+}
+
+export async function fetchExpenseItemDetail(
+  itemId: string,
+  startDate?: string,
+  endDate?: string
+): Promise<ExpenseItemDetailReport> {
+  const { data, error } = await supabase.rpc('report_item_detail', {
+    p_item_id: itemId,
+    p_start_date: startDate || null,
+    p_end_date: endDate || null,
+  });
+
+  if (error) throw error;
+  return data as ExpenseItemDetailReport;
+}
+
