@@ -1025,17 +1025,21 @@ export async function mergeExpenseItems(sourceItemId: string, targetItemId: stri
 
 export async function fetchExpensesByItemReport(
   startDate?: string,
-  endDate?: string,
-  limitCount = 20
-): Promise<ExpenseItemReportRow[]> {
+  endDate?: string
+): Promise<{
+  total_expenses_cents: number;
+  items: ExpenseItemReportRow[];
+}> {
   const { data, error } = await supabase.rpc('report_expenses_by_item', {
-    p_start_date: startDate || null,
-    p_end_date: endDate || null,
-    p_limit: limitCount,
+    p_start_date: startDate ? new Date(startDate).toISOString() : new Date('1970-01-01').toISOString(),
+    p_end_date: endDate ? new Date(endDate).toISOString() : new Date().toISOString(),
   });
 
   if (error) throw error;
-  return (data || []) as ExpenseItemReportRow[];
+  return data as {
+    total_expenses_cents: number;
+    items: ExpenseItemReportRow[];
+  };
 }
 
 export async function fetchExpenseItemDetail(
