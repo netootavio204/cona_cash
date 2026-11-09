@@ -644,7 +644,7 @@ export const PayablesPage: React.FC<PayablesPageProps> = ({
         aoFechar={() => setModalPagarAberto(false)}
         titulo="Confirmar Pagamento de Parcela"
       >
-        <form onSubmit={confirmarPagamento} className="flex flex-col gap-4 min-w-0">
+        <form noValidate onSubmit={confirmarPagamento} className="flex flex-col gap-4 min-w-0">
           <div className="p-3 rounded-xl bg-[#0B0B0D] border border-[#262630] space-y-1">
             <h4 className="text-sm font-bold text-white">
               {parcelaPagando?.purchase?.title}
@@ -717,7 +717,7 @@ export const PayablesPage: React.FC<PayablesPageProps> = ({
         aoFechar={() => setModalEditarAberto(false)}
         titulo="Editar Vencimento ou Valor da Parcela"
       >
-        <form onSubmit={confirmarEdicaoParcela} className="flex flex-col gap-4 min-w-0">
+        <form noValidate onSubmit={confirmarEdicaoParcela} className="flex flex-col gap-4 min-w-0">
           <div className="p-3 rounded-xl bg-[#0B0B0D] border border-[#262630] space-y-1">
             <h4 className="text-sm font-bold text-white">
               {parcelaEditando?.purchase?.title}

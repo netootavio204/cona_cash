@@ -320,7 +320,7 @@ export const DailyBatchTwoStagesModals: React.FC<DailyBatchModalsProps> = ({
         {/* ABA 1: REGISTRAR BRUTO (ETAPA 1) */}
         {/* =================================================================== */}
         {abaAtiva === 'novo' && (
-          <form onSubmit={salvarNovoLote} className="flex flex-col gap-4 min-w-0">
+          <form noValidate onSubmit={salvarNovoLote} className="flex flex-col gap-4 min-w-0">
             <div className="p-3 bg-[#FFC940]/10 border border-[#FFC940]/30 rounded-xl text-xs text-[#FFC940] flex items-start gap-2">
               <span className="font-bold text-sm">💡</span>
               <div>
@@ -535,6 +535,7 @@ export const DailyBatchTwoStagesModals: React.FC<DailyBatchModalsProps> = ({
                     {/* Formulário de Distribuição de Linha (quando aberta) */}
                     {linhaEmDistribuicao ? (
                       <form
+                        noValidate
                         onSubmit={submeterParte}
                         className="p-4 rounded-xl bg-[#141419] border-2 border-[#FF7A1A] flex flex-col gap-3.5 shadow-xl shadow-[#FF7A1A]/10 animate-fadeIn"
                       >
@@ -631,7 +632,6 @@ export const DailyBatchTwoStagesModals: React.FC<DailyBatchModalsProps> = ({
                             <input
                               type="tel"
                               inputMode="decimal"
-                              pattern="[0-9.,]*"
                               autoCorrect="off"
                               spellCheck={false}
                               value={taxaDistPercent}

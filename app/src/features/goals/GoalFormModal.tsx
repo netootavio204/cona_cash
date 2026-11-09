@@ -98,7 +98,7 @@ export const GoalFormModal: React.FC<GoalFormModalProps> = ({
       aoFechar={aoFechar}
       titulo={metaEditando ? 'Editar Meta' : 'Nova Meta'}
     >
-      <form onSubmit={submeter} className="flex flex-col gap-4 min-w-0">
+      <form noValidate onSubmit={submeter} className="flex flex-col gap-4 min-w-0">
         {erro && (
           <div className="flex items-center gap-2 p-3 rounded-xl bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] text-xs">
             <AlertCircle className="w-4 h-4 shrink-0" />

@@ -24,10 +24,40 @@
     <script>
       if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').then(
-            (reg) => console.log('[PWA] Service Worker ativo:', reg.scope),
-            (err) => console.log('[PWA] Falha ao registrar Service Worker:', err)
-          );
+          const isCapacitorNative =
+            Boolean(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ||
+            window.location.hostname === 'localhost';
+
+          if (isCapacitorNative) {
+            // No APK nativo (Capacitor), os arquivos já estão empacotados localmente.
+            // Removemos qualquer Service Worker e cache antigo para nunca travar em versão velha após atualizar o APK.
+            navigator.serviceWorker.getRegistrations().then((regs) => {
+              let hadSw = false;
+              Promise.all(
+                regs.map((r) => {
+                  hadSw = true;
+                  return r.unregister();
+                })
+              ).then(() => {
+                if ('caches' in window) {
+                  caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).then(() => {
+                    if (hadSw && !sessionStorage.getItem('cona_apk_sw_cleared')) {
+                      sessionStorage.setItem('cona_apk_sw_cleared', '1');
+                      window.location.reload();
+                    }
+                  });
+                }
+              });
+            });
+          } else {
+            navigator.serviceWorker.register('/sw.js').then(
+              (reg) => {
+                reg.update();
+                console.log('[PWA] Service Worker ativo:', reg.scope);
+              },
+              (err) => console.log('[PWA] Falha ao registrar Service Worker:', err)
+            );
+          }
         });
       }
     </script>

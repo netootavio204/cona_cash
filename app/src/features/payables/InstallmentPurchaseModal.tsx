@@ -169,7 +169,7 @@ export const InstallmentPurchaseModal: React.FC<InstallmentPurchaseModalProps> =
 
   return (
     <Modal aberto={aberto} aoFechar={aoFechar} titulo="Nova Compra Parcelada">
-      <form onSubmit={submeter} className="flex flex-col gap-4 min-w-0 max-h-[80vh] overflow-y-auto pr-1">
+      <form noValidate onSubmit={submeter} className="flex flex-col gap-4 min-w-0 max-h-[80vh] overflow-y-auto pr-1">
         {/* Seletor de Tipo: Cartão de Crédito ou Boleto Parcelado */}
         <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-[#0B0B0D] border border-[#262630]">
           <button

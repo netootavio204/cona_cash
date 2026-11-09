@@ -360,7 +360,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
 
   return (
     <Modal aberto={aberto} aoFechar={aoFechar} titulo={tituloModal}>
-      <form onSubmit={submeter} className="flex flex-col gap-4 min-w-0">
+      <form noValidate onSubmit={submeter} className="flex flex-col gap-4 min-w-0">
         {/* Seletor de tipo (apenas na criação) */}
         {!lancamentoEditando && (
           <div className="grid grid-cols-3 gap-1.5 bg-[#0B0B0D] p-1 rounded-xl border border-[#262630] min-w-0">
@@ -974,7 +974,7 @@ export const BatchIncomeModal: React.FC<BatchIncomeModalProps> = ({
       aoFechar={aoFechar}
       titulo="Lote do Fim do Dia (Várias Entradas)"
     >
-      <form onSubmit={salvarLote} className="flex flex-col gap-3.5 min-w-0">
+      <form noValidate onSubmit={salvarLote} className="flex flex-col gap-3.5 min-w-0">
         <p className="text-xs text-[#9A9AA6]">
           Lance vários ganhos de uma só vez. Linhas deixadas em R$ 0,00 são ignoradas automaticamente.
         </p>
