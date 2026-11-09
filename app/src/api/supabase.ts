@@ -97,6 +97,9 @@ export async function updateMyPreferences(
     sound_enabled?: boolean;
     week_starts_on?: 0 | 1;
     quick_tags?: string[];
+    due_alerts_enabled?: boolean;
+    due_alert_time?: string;
+    due_alert_days_before?: number;
   }
 ): Promise<Profile> {
   const { data, error } = await supabase

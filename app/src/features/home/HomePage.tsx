@@ -15,6 +15,10 @@ import {
   Pencil,
   History,
   Target,
+  AlertTriangle,
+  Receipt,
+  CreditCard,
+  CalendarClock,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import {
@@ -27,6 +31,7 @@ import {
   fetchTransactions,
   fetchFinancialReport,
   fetchExpensesByItemReport,
+  fetchInstallmentsSummary,
 } from '../../api/supabase';
 import type {
   Account,
@@ -37,6 +42,7 @@ import type {
   PaymentMethod,
   Transaction,
   TransactionKind,
+  InstallmentsSummary,
 } from '../../types/database';
 import {
   formatCentsToBRL,
@@ -54,6 +60,9 @@ import { Snackbar, type SnackbarMensagem } from '../../components/ui/Snackbar';
 import { ConfigPage, type SecaoConfig } from '../config/ConfigPage';
 import { ReportsPage } from '../reports/ReportsPage';
 import { GoalsPage } from '../goals/GoalsPage';
+import { PayablesPage } from '../payables/PayablesPage';
+import { InstallmentPurchaseModal } from '../payables/InstallmentPurchaseModal';
+import { scheduleInstallmentNotifications } from '../../services/notifications';
 import { GoalProgressBar } from '../../components/ui/GoalProgressBar';
 import { calculateGoalProgress } from '../../utils/goalProgress';
 import { fetchGoals, ensureMyGoals } from '../../api/supabase';
@@ -117,6 +126,8 @@ export const HomePage: React.FC = () => {
   const [itemModalDetalheId, setItemModalDetalheId] = useState<string | null>(null);
   const [metas, setMetas] = useState<Goal[]>([]);
   const [todasTransacoes, setTodasTransacoes] = useState<Transaction[]>([]);
+  const [resumoPagar, setResumoPagar] = useState<InstallmentsSummary | null>(null);
+  const [modalParcelamentoAberto, setModalParcelamentoAberto] = useState(false);
 
   // Modais de Lançamento / Lote / Histórico
   const [modalLancamentoAberto, setModalLancamentoAberto] = useState(false);
@@ -189,7 +200,7 @@ export const HomePage: React.FC = () => {
       inicioMesDate.setDate(1);
       inicioMesDate.setHours(0, 0, 0, 0);
 
-      const [balances, accs, srcs, pms, cats, recentTx, todayTx, rep7, userGoals, allTx, itensMesData] =
+      const [balances, accs, srcs, pms, cats, recentTx, todayTx, rep7, userGoals, allTx, itensMesData, payablesSum] =
         await Promise.all([
           fetchAccountBalances(),
           fetchAccounts(),
@@ -207,11 +218,22 @@ export const HomePage: React.FC = () => {
           fetchGoals().catch(() => []),
           fetchTransactions({ page: 1, pageSize: 1000 }).catch(() => ({ data: [] })),
           fetchExpensesByItemReport(inicioMesDate.toISOString(), new Date().toISOString()).catch(() => ({ total_expenses_cents: 0, items: [] })),
+          fetchInstallmentsSummary().catch(() => null),
         ]);
 
       setMetas(userGoals);
       setTodasTransacoes(allTx.data);
       setTopItensMes(itensMesData.items ? itensMesData.items.slice(0, 3) : []);
+      setResumoPagar(payablesSum);
+
+      if (perfil?.due_alerts_enabled !== false) {
+        scheduleInstallmentNotifications(
+          undefined,
+          true,
+          perfil?.due_alert_time ?? '09:00',
+          perfil?.due_alert_days_before ?? 1
+        ).catch(() => {});
+      }
 
       if (rep7) {
         setRelatorio7Dias(rep7);
@@ -343,6 +365,10 @@ export const HomePage: React.FC = () => {
       titulo: 'Lançamentos',
       subtitulo: 'Histórico completo, filtros por fonte e auditoria',
     },
+    pagar: {
+      titulo: 'Contas a Pagar',
+      subtitulo: 'Compras parceladas, faturas de cartão e boletos a vencer',
+    },
     relatorios: {
       titulo: 'Relatórios',
       subtitulo: 'Análises detalhadas por fonte de renda e exportação em PDF',
@@ -371,6 +397,7 @@ export const HomePage: React.FC = () => {
         aoAlternarRecolhida={alternarSidebarRecolhida}
         nomeUsuario={perfil?.name || 'Octavio'}
         isAdmin={Boolean(isAdmin)}
+        badgePagar={resumoPagar?.overdue_count || 0}
         aoSair={sair}
       />
 
@@ -477,6 +504,35 @@ export const HomePage: React.FC = () => {
 
         {/* Conteúdo Principal */}
         <main className="max-w-2xl mx-auto px-3 sm:px-6 pt-4 flex flex-col gap-4 min-w-0 lg:max-w-[1440px] lg:w-full lg:px-8 lg:pt-6 lg:pb-8 lg:gap-6">
+          {/* FAIXA VERMELHA DE CONTAS ATRASADAS (FASE 9 — v1.4.0 / PARTE D) */}
+          {resumoPagar && resumoPagar.overdue_count > 0 && aba === 'inicio' && (
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-[#D62F25]/25 via-[#FF3B30]/20 to-[#141418] border border-[#FF3B30]/60 flex items-center justify-between gap-3 shadow-lg shadow-[#FF3B30]/10 animate-fadeIn">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-[#FF3B30]/20 text-[#FF3B30] flex items-center justify-center shrink-0 border border-[#FF3B30]/50">
+                  <AlertTriangle className="w-5 h-5 animate-pulse" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs sm:text-sm font-black text-[#FF3B30] uppercase tracking-wider block truncate">
+                    Atenção: {resumoPagar.overdue_count} {resumoPagar.overdue_count === 1 ? 'conta atrasada' : 'contas atrasadas'}
+                  </span>
+                  <span className="text-base sm:text-lg font-black text-white tabular-nums block">
+                    Total de {formatCentsToBRL(resumoPagar.overdue_cents)}
+                  </span>
+                  <span className="text-[11px] text-[#9A9AA6] truncate block">
+                    Evite multas e juros quitando suas pendências
+                  </span>
+                </div>
+              </div>
+              <Botao
+                variante="primario"
+                tamanho="sm"
+                texto="Ver contas"
+                onClick={() => setAba('pagar')}
+                className="shrink-0 bg-[#FF3B30] hover:bg-[#E02D22] text-white font-bold"
+              />
+            </div>
+          )}
+
           {aba === 'inicio' && (
             <div className="contents lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start">
               <div className="contents lg:col-span-5 lg:flex lg:flex-col lg:gap-6 lg:min-w-0">
@@ -598,6 +654,73 @@ export const HomePage: React.FC = () => {
                     }}
                   />
                 </div>
+
+                {/* CARD: CONTAS A PAGAR (FASE 9 — v1.4.0 / PARTE D) */}
+                {resumoPagar && (
+                  <Card padding="md">
+                    <div className="flex items-center justify-between gap-2 mb-2 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Receipt className="w-4 h-4 text-[#FF7A1A]" />
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-[#9A9AA6] truncate">
+                          Contas a Pagar
+                        </h3>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setModalParcelamentoAberto(true)}
+                          className="text-xs text-[#2EE59D] font-bold hover:underline flex items-center gap-1"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Parcelar
+                        </button>
+                        <span className="text-[#9A9AA6]/50">|</span>
+                        <button
+                          type="button"
+                          onClick={() => setAba('pagar')}
+                          className="text-xs text-[#FF7A1A] font-semibold hover:underline"
+                        >
+                          Ver todas
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 min-[1400px]:grid-cols-4 gap-2 pt-1 min-w-0">
+                      <div
+                        onClick={() => setAba('pagar')}
+                        className="p-2 rounded-xl bg-[#0B0B0D] border border-[#262630] cursor-pointer hover:border-[#FF3B30]/50 transition-colors min-w-0"
+                      >
+                        <span className="text-[10px] text-[#FF3B30] font-bold block truncate">Atrasadas</span>
+                        <ValorMoeda centavos={resumoPagar.overdue_cents} tamanho="sm" cor="negativo" compacto />
+                        <span className="text-[9px] text-[#9A9AA6] block">{resumoPagar.overdue_count} conta(s)</span>
+                      </div>
+                      <div
+                        onClick={() => setAba('pagar')}
+                        className="p-2 rounded-xl bg-[#0B0B0D] border border-[#262630] cursor-pointer hover:border-[#FFC940]/50 transition-colors min-w-0"
+                      >
+                        <span className="text-[10px] text-[#FFC940] font-bold block truncate">Vencem hoje</span>
+                        <ValorMoeda centavos={resumoPagar.due_today_cents} tamanho="sm" cor="destaque" compacto />
+                        <span className="text-[9px] text-[#9A9AA6] block">{resumoPagar.due_today_count} conta(s)</span>
+                      </div>
+                      <div
+                        onClick={() => setAba('pagar')}
+                        className="p-2 rounded-xl bg-[#0B0B0D] border border-[#262630] cursor-pointer hover:border-white/30 transition-colors min-w-0"
+                      >
+                        <span className="text-[10px] text-[#9A9AA6] font-semibold block truncate">Próx. 7 dias</span>
+                        <ValorMoeda centavos={resumoPagar.next_7_days_cents} tamanho="sm" cor="padrao" compacto />
+                        <span className="text-[9px] text-[#9A9AA6] block">{resumoPagar.next_7_days_count} conta(s)</span>
+                      </div>
+                      <div
+                        onClick={() => setAba('pagar')}
+                        className="p-2 rounded-xl bg-[#0B0B0D] border border-[#262630] cursor-pointer hover:border-white/30 transition-colors min-w-0"
+                      >
+                        <span className="text-[10px] text-[#9A9AA6] font-semibold block truncate">Total do mês</span>
+                        <ValorMoeda centavos={resumoPagar.month_total_cents} tamanho="sm" cor="padrao" compacto />
+                        <span className="text-[9px] text-[#9A9AA6] block">a vencer no mês</span>
+                      </div>
+                    </div>
+                  </Card>
+                )}
 
                 {/* CARD: MAIORES GASTOS DO MÊS (TOP 3 ITENS) — NOVO v1.2 / PARTE D */}
                 {topItensMes.length > 0 && (
@@ -995,6 +1118,16 @@ export const HomePage: React.FC = () => {
             />
           )}
 
+          {aba === 'pagar' && (
+            <PayablesPage
+              contas={contas}
+              categorias={categorias}
+              fontes={fontes}
+              onShowToast={mostrarAviso}
+              onRefreshData={carregarDadosGerais}
+            />
+          )}
+
           {aba === 'relatorios' && (
             <ReportsPage />
           )}
@@ -1054,11 +1187,25 @@ export const HomePage: React.FC = () => {
             formas={formas}
             categorias={categorias}
             quickTags={perfil?.quick_tags}
+            aoAbrirParcelamento={() => setModalParcelamentoAberto(true)}
             aoSalvarSucesso={(msg) => {
               mostrarAviso(msg, 'sucesso');
               carregarDadosGerais();
             }}
             aoErro={(msg) => mostrarAviso(msg, 'erro')}
+          />
+
+          <InstallmentPurchaseModal
+            aberto={modalParcelamentoAberto}
+            aoFechar={() => setModalParcelamentoAberto(false)}
+            contas={contas}
+            categorias={categorias}
+            fontes={fontes}
+            aoSalvarSucesso={(msg: string) => {
+              mostrarAviso(msg, 'sucesso');
+              carregarDadosGerais();
+            }}
+            aoErro={(msg: string) => mostrarAviso(msg, 'erro')}
           />
 
           <DailyBatchTwoStagesModals
@@ -1091,7 +1238,11 @@ export const HomePage: React.FC = () => {
       )}
 
       <PwaInstallPrompt />
-      <BottomNav abaAtiva={aba} aoTrocarAba={setAba} />
+      <BottomNav
+        abaAtiva={aba}
+        aoTrocarAba={setAba}
+        badgePagar={resumoPagar?.overdue_count || 0}
+      />
       <Snackbar mensagem={snackbar} aoFechar={() => setSnackbar(null)} />
     </div>
   );

@@ -192,3 +192,4 @@ export const AppIcon: React.FC<{
 
   return <CircleHelp className={className} />;
 };
+

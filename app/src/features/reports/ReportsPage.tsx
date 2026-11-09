@@ -17,12 +17,14 @@ import type {
   IncomeSource,
   Transaction,
   ExpenseItemReportRow,
+  InstallmentsSummary,
 } from '../../types/database';
 import {
   fetchFinancialReport,
   fetchIncomeSources,
   fetchTransactions,
   fetchExpensesByItemReport,
+  fetchInstallmentsSummary,
 } from '../../api/supabase';
 import {
   formatCentsToBRL,
@@ -63,6 +65,7 @@ export const ReportsPage: React.FC = () => {
   const [relatorioAnterior, setRelatorioAnterior] = useState<FinancialReportData | null>(null);
   const [itensRelatorio, setItensRelatorio] = useState<ExpenseItemReportRow[]>([]);
   const [totalItensCentavos, setTotalItensCentavos] = useState(0);
+  const [resumoPagar, setResumoPagar] = useState<InstallmentsSummary | null>(null);
   const [itemSelecionadoDetalhe, setItemSelecionadoDetalhe] = useState<string | null>(null);
   const [itemFiltroTexto, setItemFiltroTexto] = useState('');
   const [datasBounds, setDatasBounds] = useState<{ startISO: string; endISO: string }>({ startISO: '', endISO: '' });
@@ -98,7 +101,7 @@ export const ReportsPage: React.FC = () => {
       setPeriodoLabel(label);
       setDatasBounds({ startISO, endISO });
 
-      const [curReport, prevReport, itemReportData] = await Promise.all([
+      const [curReport, prevReport, itemReportData, payablesSum] = await Promise.all([
         fetchFinancialReport({
           startDateISO: startISO,
           endDateISO: endISO,
@@ -115,12 +118,14 @@ export const ReportsPage: React.FC = () => {
           console.warn('Erro ao carregar ranking de itens:', err);
           return { total_expenses_cents: 0, items: [] };
         }),
+        fetchInstallmentsSummary().catch(() => null),
       ]);
 
       setRelatorioAtual(curReport);
       setRelatorioAnterior(prevReport);
       setItensRelatorio(itemReportData.items || []);
       setTotalItensCentavos(itemReportData.total_expenses_cents || 0);
+      setResumoPagar(payablesSum);
     } catch (err) {
       console.error('Erro ao carregar relatórios:', err);
     } finally {
@@ -179,6 +184,7 @@ export const ReportsPage: React.FC = () => {
         nomeUsuario: perfil?.name || 'Octavio',
         fonteSelecionadaNome: fonteNome,
         topItens: itensRelatorio,
+        installmentsSummary: resumoPagar,
       });
     } catch (err) {
       console.error('Erro ao exportar PDF:', err);
@@ -566,6 +572,76 @@ export const ReportsPage: React.FC = () => {
               )}
             </div>
           </Card>
+
+          {/* CARD NOVO v1.4.0 — CONTAS A PAGAR & COMPROMISSOS FUTUROS (PARTE E) */}
+          {resumoPagar && (
+            <Card padding="lg">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-[#262630]/70 min-w-0">
+                <div>
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider truncate">
+                    Contas a Pagar & Compromissos Futuros
+                  </h3>
+                  <p className="text-xs text-[#9A9AA6] truncate">
+                    Parcelas de cartão e boleto cadastradas (regime de caixa)
+                  </p>
+                </div>
+                <div className="px-2.5 py-1 rounded-lg bg-[#FF7A1A]/10 border border-[#FF7A1A]/30 text-[#FF7A1A] text-xs font-bold shrink-0 self-start sm:self-auto">
+                  {resumoPagar.overdue_count + resumoPagar.due_today_count + resumoPagar.next_7_days_count} parcelas prioritárias
+                </div>
+              </div>
+
+              {/* Grid de KPIs de Contas a Pagar */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                <div className="p-3 rounded-xl bg-[#0B0B0D] border border-[#262630] min-w-0">
+                  <span className="text-[11px] text-[#9A9AA6] block truncate">Total do Mês</span>
+                  <ValorMoeda centavos={resumoPagar.month_total_cents} tamanho="sm" cor="padrao" />
+                  <span className="text-[10px] text-[#9A9AA6] block truncate">a vencer no mês</span>
+                </div>
+                <div className="p-3 rounded-xl bg-[#0B0B0D] border border-[#262630] min-w-0">
+                  <span className="text-[11px] text-[#FF3B30] font-bold block truncate">Atrasadas</span>
+                  <ValorMoeda centavos={resumoPagar.overdue_cents} tamanho="sm" cor="negativo" />
+                  <span className="text-[10px] text-[#FF3B30] block truncate">{resumoPagar.overdue_count} parcelas</span>
+                </div>
+                <div className="p-3 rounded-xl bg-[#0B0B0D] border border-[#262630] min-w-0">
+                  <span className="text-[11px] text-[#FFC940] font-bold block truncate">Vencem Hoje</span>
+                  <ValorMoeda centavos={resumoPagar.due_today_cents} tamanho="sm" cor="destaque" />
+                  <span className="text-[10px] text-[#FFC940] block truncate">{resumoPagar.due_today_count} parcelas</span>
+                </div>
+                <div className="p-3 rounded-xl bg-[#0B0B0D] border border-[#262630] min-w-0">
+                  <span className="text-[11px] text-[#2EE59D] font-bold block truncate">Próx. 7 Dias</span>
+                  <ValorMoeda centavos={resumoPagar.next_7_days_cents} tamanho="sm" cor="positivo" />
+                  <span className="text-[10px] text-[#9A9AA6] block truncate">{resumoPagar.next_7_days_count} parcelas</span>
+                </div>
+              </div>
+
+              {/* Comprometimento nos Próximos 6 Meses */}
+              {resumoPagar.committed_next_6_months && resumoPagar.committed_next_6_months.length > 0 && (
+                <div className="pt-2 border-t border-[#262630]/70">
+                  <h4 className="text-xs font-bold text-[#F5F5F7] mb-2 uppercase tracking-wider">
+                    Comprometimento Previsto (Próximos Meses)
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                    {resumoPagar.committed_next_6_months.map((m: { year_month: string; month_label: string; total_cents: number; count: number }) => (
+                      <div
+                        key={m.year_month}
+                        className="p-2.5 rounded-xl bg-[#0B0B0D] border border-[#262630] flex flex-col justify-between"
+                      >
+                        <span className="text-[11px] font-bold text-[#FF7A1A] block">
+                          {m.month_label}
+                        </span>
+                        <span className="text-xs font-bold text-white tabular-nums my-1 block">
+                          {formatCentsToBRL(m.total_cents)}
+                        </span>
+                        <span className="text-[10px] text-[#9A9AA6] block">
+                          {m.count} parcela(s)
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
 
           {/* GRÁFICOS: EVOLUÇÃO DIÁRIA + DISTRIBUIÇÃO */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 min-w-0">

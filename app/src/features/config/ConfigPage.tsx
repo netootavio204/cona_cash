@@ -27,11 +27,14 @@ import {
   Database,
   FileSpreadsheet,
   Download,
+  Bell,
+  Clock,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { downloadJSON, downloadCSV } from '../../utils/exportUserData';
 import { fetchTransactions, fetchGoals } from '../../api/supabase';
+import { scheduleInstallmentNotifications } from '../../services/notifications';
 import {
   ensureMyDefaults,
   fetchAccounts,
@@ -56,6 +59,9 @@ import {
   fetchAllProfilesAdmin,
   updateUserStatusAdmin,
   updateSignupOpenAdmin,
+  fetchExpenseItems,
+  updateExpenseItem,
+  mergeExpenseItems,
 } from '../../api/supabase';
 import {
   DEFAULT_QUICK_TAGS,
@@ -64,6 +70,7 @@ import {
   type AccountType,
   type Category,
   type CategoryIconName,
+  type ExpenseItem,
   type IncomeSource,
   type PaymentMethod,
   type Profile,
@@ -90,6 +97,7 @@ export type SecaoConfig =
   | 'fontes'
   | 'formas'
   | 'categorias'
+  | 'itens'
   | 'preferencias'
   | 'admin';
 
@@ -130,6 +138,7 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
   const [fontes, setFontes] = useState<IncomeSource[]>([]);
   const [formas, setFormas] = useState<PaymentMethod[]>([]);
   const [categorias, setCategorias] = useState<Category[]>([]);
+  const [itensSaida, setItensSaida] = useState<ExpenseItem[]>([]);
   const [mostrarArquivados, setMostrarArquivados] = useState(false);
 
   // Proteção caso usuário comum tente acessar #admin ou /admin diretamente na URL
@@ -154,16 +163,18 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
     setCarregandoDados(true);
     try {
       await ensureMyDefaults();
-      const [accs, srcs, pms, cats] = await Promise.all([
+      const [accs, srcs, pms, cats, itemsList] = await Promise.all([
         fetchAccounts(),
         fetchIncomeSources(),
         fetchPaymentMethods(),
         fetchCategories(),
+        fetchExpenseItems(true).catch(() => []),
       ]);
       setContas(accs);
       setFontes(srcs);
       setFormas(pms);
       setCategorias(cats);
+      setItensSaida(itemsList);
     } catch (err: any) {
       onShowToast(err?.message || 'Erro ao carregar configurações.', 'erro');
     } finally {
@@ -537,6 +548,100 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
   };
 
   // ============================================================================
+  // MODAL E GERENCIAMENTO DE ITENS DE SAÍDA (FASE 8 — PARTE C)
+  // ============================================================================
+  const [modalItemAberto, setModalItemAberto] = useState(false);
+  const [itemEditando, setItemEditando] = useState<ExpenseItem | null>(null);
+  const [itemNome, setItemNome] = useState('');
+  const [itemIcone, setItemIcone] = useState('tag');
+  const [itemCategoriaId, setItemCategoriaId] = useState('');
+  const [itemContaId, setItemContaId] = useState('');
+  const [itemValorPadrao, setItemValorPadrao] = useState(0);
+  const [salvandoItem, setSalvandoItem] = useState(false);
+
+  // Modal de Mesclar Duplicados
+  const [modalMesclarAberto, setModalMesclarAberto] = useState(false);
+  const [itemOrigemId, setItemOrigemId] = useState('');
+  const [itemDestinoId, setItemDestinoId] = useState('');
+  const [mesclando, setMesclando] = useState(false);
+
+  const abrirEditarItem = (item: ExpenseItem) => {
+    setItemEditando(item);
+    setItemNome(item.name);
+    setItemIcone(item.icon || 'tag');
+    setItemCategoriaId(item.default_category_id || '');
+    setItemContaId(item.default_account_id || '');
+    setItemValorPadrao(item.default_amount_cents || 0);
+    setModalItemAberto(true);
+  };
+
+  const salvarItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!itemEditando) return;
+    if (!itemNome.trim()) {
+      onShowToast('Digite o nome do item.', 'erro');
+      return;
+    }
+
+    setSalvandoItem(true);
+    try {
+      await updateExpenseItem(itemEditando.id, {
+        name: itemNome.trim(),
+        icon: itemIcone,
+        default_category_id: itemCategoriaId || null,
+        default_account_id: itemContaId || null,
+        default_amount_cents: itemValorPadrao,
+      });
+      onShowToast('Item atualizado com sucesso!', 'sucesso');
+      setModalItemAberto(false);
+      await carregarTudo();
+    } catch (err: any) {
+      onShowToast(err?.message || 'Erro ao salvar item.', 'erro');
+    } finally {
+      setSalvandoItem(false);
+    }
+  };
+
+  const alternarArquivoItem = async (item: ExpenseItem) => {
+    try {
+      await updateExpenseItem(item.id, { archived: !item.archived });
+      onShowToast(
+        item.archived ? `"${item.name}" restaurado.` : `"${item.name}" arquivado.`,
+        'info'
+      );
+      await carregarTudo();
+    } catch (err: any) {
+      onShowToast(err?.message || 'Erro ao arquivar/restaurar item.', 'erro');
+    }
+  };
+
+  const executarMesclagem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!itemOrigemId || !itemDestinoId) {
+      onShowToast('Selecione o item de origem e o de destino.', 'erro');
+      return;
+    }
+    if (itemOrigemId === itemDestinoId) {
+      onShowToast('O item de origem e destino devem ser diferentes.', 'erro');
+      return;
+    }
+
+    setMesclando(true);
+    try {
+      await mergeExpenseItems(itemOrigemId, itemDestinoId);
+      onShowToast('Itens mesclados com sucesso! O histórico foi unificado.', 'sucesso');
+      setModalMesclarAberto(false);
+      setItemOrigemId('');
+      setItemDestinoId('');
+      await carregarTudo();
+    } catch (err: any) {
+      onShowToast(err?.message || 'Erro ao mesclar itens duplicados.', 'erro');
+    } finally {
+      setMesclando(false);
+    }
+  };
+
+  // ============================================================================
   // MODAL DE FONTE DE RENDA / APORTE (income_sources — Fase 3B)
   // ============================================================================
   const [modalFonteAberto, setModalFonteAberto] = useState(false);
@@ -656,6 +761,15 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
   const [prefDiaSemana, setPrefDiaSemana] = useState<0 | 1>(
     perfil?.week_starts_on ?? 1
   );
+  const [prefAvisosContas, setPrefAvisosContas] = useState(
+    perfil?.due_alerts_enabled ?? true
+  );
+  const [prefHorarioAvisos, setPrefHorarioAvisos] = useState(
+    perfil?.due_alert_time ?? '09:00'
+  );
+  const [prefAntecedenciaAvisos, setPrefAntecedenciaAvisos] = useState<number>(
+    perfil?.due_alert_days_before ?? 1
+  );
   const [prefTags, setPrefTags] = useState<string[]>(
     perfil?.quick_tags && perfil.quick_tags.length > 0
       ? perfil.quick_tags
@@ -713,6 +827,9 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
       setPrefNome(perfil.name);
       setPrefSom(perfil.sound_enabled);
       setPrefDiaSemana(perfil.week_starts_on);
+      setPrefAvisosContas(perfil.due_alerts_enabled ?? true);
+      setPrefHorarioAvisos(perfil.due_alert_time ?? '09:00');
+      setPrefAntecedenciaAvisos(perfil.due_alert_days_before ?? 1);
       setPrefTags(
         perfil.quick_tags && perfil.quick_tags.length > 0
           ? perfil.quick_tags
@@ -731,9 +848,20 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
         sound_enabled: prefSom,
         week_starts_on: prefDiaSemana,
         quick_tags: prefTags.length > 0 ? prefTags : DEFAULT_QUICK_TAGS,
+        due_alerts_enabled: prefAvisosContas,
+        due_alert_time: prefHorarioAvisos,
+        due_alert_days_before: prefAntecedenciaAvisos,
       });
       await recarregarPerfilEConfig();
-      onShowToast('Preferências e tags salvas com sucesso!', 'sucesso');
+      if (prefAvisosContas) {
+        scheduleInstallmentNotifications(
+          undefined,
+          true,
+          prefHorarioAvisos,
+          prefAntecedenciaAvisos
+        ).catch(() => {});
+      }
+      onShowToast('Preferências salvas com sucesso!', 'sucesso');
     } catch (err: any) {
       onShowToast(err?.message || 'Erro ao salvar preferências.', 'erro');
     } finally {
@@ -902,6 +1030,20 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
 
         <button
           type="button"
+          onClick={() => setSecao('itens')}
+          className={[
+            'min-h-[42px] px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all min-w-0 overflow-hidden',
+            secao === 'itens'
+              ? 'bg-[#FF7A1A] text-[#0B0B0D] shadow'
+              : 'text-[#9A9AA6] hover:text-white',
+          ].join(' ')}
+        >
+          <Sparkles className="w-4 h-4 shrink-0" />
+          <span className="truncate">Itens de Saída</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setSecao('preferencias')}
           className={[
             'min-h-[42px] px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all min-w-0 overflow-hidden',
@@ -931,11 +1073,12 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
         )}
       </div>
 
-      {/* Filtro de Arquivados para Contas / Fontes / Formas / Categorias */}
+      {/* Filtro de Arquivados para Contas / Fontes / Formas / Categorias / Itens */}
       {(secao === 'contas' ||
         secao === 'fontes' ||
         secao === 'formas' ||
-        secao === 'categorias') && (
+        secao === 'categorias' ||
+        secao === 'itens') && (
         <div className="flex flex-wrap items-center justify-between gap-2 px-1 min-w-0">
           <label className="inline-flex items-center gap-2 text-xs text-[#9A9AA6] cursor-pointer select-none min-w-0">
             <input
@@ -1389,6 +1532,89 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
       )}
 
       {/* ====================================================================
+          SEÇÃO ITENS DE SAÍDA: RENOMEAR, MESCLAR E PADRÕES (FASE 8 — PARTE C)
+      ==================================================================== */}
+      {secao === 'itens' && (
+        <div className="flex flex-col gap-3 min-w-0">
+          <div className="flex items-center justify-between gap-2 p-3 rounded-2xl bg-[#141418] border border-[#262630] min-w-0">
+            <div>
+              <h3 className="text-sm font-bold text-white truncate">
+                Itens de Saída Cadastrados ({itensSaida.length})
+              </h3>
+              <p className="text-xs text-[#9A9AA6] truncate">
+                Gerencie valores padrão, categorias e junte itens duplicados.
+              </p>
+            </div>
+            <Botao
+              variante="secundario"
+              tamanho="sm"
+              icone={<RotateCcw className="w-3.5 h-3.5 text-[#FF7A1A]" />}
+              texto="Mesclar Duplicados"
+              onClick={() => setModalMesclarAberto(true)}
+            />
+          </div>
+
+          {itensSaida.filter((i) => (mostrarArquivados ? true : !i.archived)).length === 0 ? (
+            <Card>
+              <p className="text-xs text-[#9A9AA6] py-4 text-center">
+                Nenhum item de saída cadastrado ainda. Eles são criados automaticamente ao registrar uma compra.
+              </p>
+            </Card>
+          ) : (
+            itensSaida
+              .filter((i) => (mostrarArquivados ? true : !i.archived))
+              .map((item) => {
+                const catItem = categorias.find((c) => c.id === item.default_category_id);
+                const accItem = contas.find((c) => c.id === item.default_account_id);
+                return (
+                  <Card key={item.id} padding="sm">
+                    <div className="flex items-center justify-between gap-3 min-w-0">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-white flex items-center justify-center shrink-0">
+                          <AppIcon name={item.icon} className="w-5 h-5 text-[#FF7A1A]" />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-sm font-bold text-white truncate">{item.name}</h4>
+                          <p className="text-xs text-[#9A9AA6] truncate">
+                            Usado {item.use_count}x
+                            {item.default_amount_cents > 0 && ` • Padrão: ${formatCentsToBRL(item.default_amount_cents)}`}
+                            {catItem ? ` • ${catItem.name}` : ''}
+                            {accItem ? ` • ${accItem.name}` : ''}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Botao
+                          variante="secundario"
+                          tamanho="sm"
+                          icone={<Pencil className="w-3.5 h-3.5" />}
+                          texto="Editar"
+                          onClick={() => abrirEditarItem(item)}
+                        />
+                        <Botao
+                          variante="fantasma"
+                          tamanho="sm"
+                          icone={
+                            item.archived ? (
+                              <RotateCcw className="w-3.5 h-3.5 text-[#2EE59D]" />
+                            ) : (
+                              <Archive className="w-3.5 h-3.5 text-[#FFC940]" />
+                            )
+                          }
+                          texto={item.archived ? 'Restaurar' : 'Arquivar'}
+                          onClick={() => alternarArquivoItem(item)}
+                        />
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })
+          )}
+        </div>
+      )}
+
+      {/* ====================================================================
           SEÇÃO 4: PREFERÊNCIAS DO USUÁRIO + ALTERAR SENHA
       ==================================================================== */}
       {secao === 'preferencias' && (
@@ -1555,6 +1781,108 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
                     Domingo
                   </button>
                 </div>
+              </div>
+
+              {/* Avisos de Vencimento e Contas a Pagar (Fase 9 — v1.4.0 / PARTE D) */}
+              <div className="p-3.5 rounded-xl bg-[#0B0B0D] border border-[#262630] space-y-3 min-w-0">
+                <div className="flex items-center justify-between gap-3 min-w-0">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-[#FF7A1A]/15 text-[#FF7A1A] flex items-center justify-center shrink-0">
+                      <Bell className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-white truncate">
+                        Lembretes de Contas a Pagar
+                      </p>
+                      <p className="text-xs text-[#9A9AA6] truncate">
+                        {prefAvisosContas
+                          ? 'Avisos de vencimento e parcelas atrasadas ativados'
+                          : 'Avisos desativados'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={prefAvisosContas}
+                    onClick={() => setPrefAvisosContas((v) => !v)}
+                    className={[
+                      'w-14 h-8 rounded-full p-1 transition-colors shrink-0 flex items-center',
+                      prefAvisosContas ? 'bg-[#2EE59D]' : 'bg-[#262630]',
+                    ].join(' ')}
+                  >
+                    <span
+                      className={[
+                        'w-6 h-6 rounded-full bg-[#0B0B0D] shadow transition-transform',
+                        prefAvisosContas ? 'translate-x-6' : 'translate-x-0',
+                      ].join(' ')}
+                    />
+                  </button>
+                </div>
+
+                {prefAvisosContas && (
+                  <div className="pt-2 border-t border-[#262630]/60 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-[#FF7A1A]" />
+                        <span className="text-xs text-[#F5F5F7]">Horário dos lembretes</span>
+                      </div>
+                      <input
+                        type="time"
+                        value={prefHorarioAvisos}
+                        onChange={(e) => setPrefHorarioAvisos(e.target.value)}
+                        className="px-3 py-1.5 rounded-lg bg-[#141418] border border-[#262630] text-xs text-white focus:outline-none focus:border-[#FF7A1A]"
+                      />
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 min-w-0">
+                      <span className="text-xs text-[#F5F5F7]">Avisar com antecedência</span>
+                      <div className="grid grid-cols-3 gap-1.5 bg-[#141418] p-1 rounded-xl border border-[#262630] shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setPrefAntecedenciaAvisos(0)}
+                          className={[
+                            'min-h-[34px] px-2.5 rounded-lg text-xs font-bold transition-colors',
+                            prefAntecedenciaAvisos === 0
+                              ? 'bg-[#FF7A1A] text-[#0B0B0D]'
+                              : 'text-[#9A9AA6] hover:text-white',
+                          ].join(' ')}
+                        >
+                          No dia
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPrefAntecedenciaAvisos(1)}
+                          className={[
+                            'min-h-[34px] px-2.5 rounded-lg text-xs font-bold transition-colors',
+                            prefAntecedenciaAvisos === 1
+                              ? 'bg-[#FF7A1A] text-[#0B0B0D]'
+                              : 'text-[#9A9AA6] hover:text-white',
+                          ].join(' ')}
+                        >
+                          1 dia antes
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPrefAntecedenciaAvisos(3)}
+                          className={[
+                            'min-h-[34px] px-2.5 rounded-lg text-xs font-bold transition-colors',
+                            prefAntecedenciaAvisos === 3
+                              ? 'bg-[#FF7A1A] text-[#0B0B0D]'
+                              : 'text-[#9A9AA6] hover:text-white',
+                          ].join(' ')}
+                        >
+                          3 dias antes
+                        </button>
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-[#9A9AA6]/80 leading-relaxed bg-[#141418] p-2.5 rounded-lg border border-[#262630]/70">
+                      💡 <strong>No aplicativo (celular):</strong> as notificações chegam direto na barra de status do sistema no horário agendado. <strong>No navegador/PWA:</strong> os alertas são exibidos visualmente na tela inicial do app.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Tags rápidas editáveis (Fase 3B item 8) */}
@@ -2308,6 +2636,159 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
             />
           </div>
         </div>
+      </Modal>
+
+      {/* ====================================================================
+          MODAL: EDITAR ITEM DE SAÍDA (FASE 8 — PARTE C)
+      ==================================================================== */}
+      <Modal
+        aberto={modalItemAberto}
+        aoFechar={() => setModalItemAberto(false)}
+        titulo="Editar Item de Saída"
+      >
+        <form onSubmit={salvarItem} className="flex flex-col gap-4 min-w-0">
+          <Campo
+            rotulo="Nome do item (ex: Palheiro, Café, Filamento)"
+            value={itemNome}
+            onChange={(e) => setItemNome(e.target.value)}
+            placeholder="Nome do item"
+          />
+
+          <IconPicker
+            value={itemIcone}
+            onChange={setItemIcone}
+            label="Ícone do Item"
+          />
+
+          <div className="flex flex-col gap-1.5 min-w-0">
+            <label className="text-xs sm:text-sm font-medium text-[#F5F5F7]">
+              Categoria padrão (sugerida na compra)
+            </label>
+            <select
+              value={itemCategoriaId}
+              onChange={(e) => setItemCategoriaId(e.target.value)}
+              className="w-full min-h-[46px] px-3 bg-[#0B0B0D] border border-[#262630] rounded-xl text-white text-xs sm:text-sm"
+            >
+              <option value="">Sem categoria padrão</option>
+              {categorias.filter((c) => !c.archived).map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1.5 min-w-0">
+            <label className="text-xs sm:text-sm font-medium text-[#F5F5F7]">
+              Conta padrão (sugerida na compra)
+            </label>
+            <select
+              value={itemContaId}
+              onChange={(e) => setItemContaId(e.target.value)}
+              className="w-full min-h-[46px] px-3 bg-[#0B0B0D] border border-[#262630] rounded-xl text-white text-xs sm:text-sm"
+            >
+              <option value="">Sem conta padrão</option>
+              {contas.filter((c) => !c.archived).map((acc) => (
+                <option key={acc.id} value={acc.id}>
+                  {acc.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <CampoMoeda
+            rotulo="Valor padrão / sugerido em R$"
+            centavos={itemValorPadrao}
+            aoMudarCentavos={setItemValorPadrao}
+          />
+
+          <div className="flex gap-2 pt-2">
+            <Botao
+              type="button"
+              variante="secundario"
+              larguraTotal
+              texto="Cancelar"
+              onClick={() => setModalItemAberto(false)}
+            />
+            <Botao
+              type="submit"
+              variante="primario"
+              larguraTotal
+              carregando={salvandoItem}
+              texto="Salvar Item"
+            />
+          </div>
+        </form>
+      </Modal>
+
+      {/* ====================================================================
+          MODAL: MESCLAR ITENS DUPLICADOS (FASE 8 — PARTE C)
+      ==================================================================== */}
+      <Modal
+        aberto={modalMesclarAberto}
+        aoFechar={() => setModalMesclarAberto(false)}
+        titulo="Mesclar Itens Duplicados"
+      >
+        <form onSubmit={executarMesclagem} className="flex flex-col gap-4 min-w-0">
+          <p className="text-xs text-[#9A9AA6] leading-relaxed">
+            Todas as saídas antigas do <strong>Item a ser incorporado</strong> serão migradas para o <strong>Item principal</strong>. O item antigo será arquivado sem perder nenhuma informação.
+          </p>
+
+          <div className="flex flex-col gap-1.5 min-w-0">
+            <label className="text-xs sm:text-sm font-medium text-[#F5F5F7]">
+              1. Item a ser incorporado (duplicado/antigo)
+            </label>
+            <select
+              value={itemOrigemId}
+              onChange={(e) => setItemOrigemId(e.target.value)}
+              className="w-full min-h-[46px] px-3 bg-[#0B0B0D] border border-[#262630] rounded-xl text-white text-xs sm:text-sm"
+              required
+            >
+              <option value="">Selecione o item de origem...</option>
+              {itensSaida.filter((i) => i.id !== itemDestinoId).map((it) => (
+                <option key={it.id} value={it.id}>
+                  {it.name} ({it.use_count} compras)
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1.5 min-w-0">
+            <label className="text-xs sm:text-sm font-medium text-[#F5F5F7]">
+              2. Item principal definitivo (que vai permanecer)
+            </label>
+            <select
+              value={itemDestinoId}
+              onChange={(e) => setItemDestinoId(e.target.value)}
+              className="w-full min-h-[46px] px-3 bg-[#0B0B0D] border border-[#262630] rounded-xl text-white text-xs sm:text-sm"
+              required
+            >
+              <option value="">Selecione o item de destino...</option>
+              {itensSaida.filter((i) => i.id !== itemOrigemId).map((it) => (
+                <option key={it.id} value={it.id}>
+                  {it.name} ({it.use_count} compras)
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <Botao
+              type="button"
+              variante="secundario"
+              larguraTotal
+              texto="Cancelar"
+              onClick={() => setModalMesclarAberto(false)}
+            />
+            <Botao
+              type="submit"
+              variante="primario"
+              larguraTotal
+              carregando={mesclando}
+              texto="Confirmar e Unificar"
+            />
+          </div>
+        </form>
       </Modal>
     </div>
   );

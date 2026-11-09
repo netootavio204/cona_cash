@@ -10,6 +10,7 @@ import {
   ChevronRight,
   LogOut,
   Keyboard,
+  Receipt,
 } from 'lucide-react';
 import type { AbaNavegacao } from './BottomNav';
 import { APP_NAME, APP_VERSION } from '../../config/version';
@@ -22,6 +23,7 @@ export interface SidebarProps {
   aoAlternarRecolhida: () => void;
   nomeUsuario: string;
   isAdmin: boolean;
+  badgePagar?: number;
   aoSair: () => void;
 }
 
@@ -35,6 +37,11 @@ const itensMenu: {
     id: 'lancamentos',
     rotulo: 'Lançamentos',
     icone: <ArrowUpDown className="w-5 h-5" />,
+  },
+  {
+    id: 'pagar',
+    rotulo: 'Contas a Pagar',
+    icone: <Receipt className="w-5 h-5" />,
   },
   {
     id: 'relatorios',
@@ -57,6 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   aoAlternarRecolhida,
   nomeUsuario,
   isAdmin,
+  badgePagar,
   aoSair,
 }) => {
   const navRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -158,18 +166,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 aria-label={item.rotulo}
                 aria-current={ativo ? 'page' : undefined}
                 className={[
-                  'min-h-[46px] min-[1920px]:min-h-[54px] px-3 py-2 rounded-xl flex items-center gap-3 transition-all min-w-0 overflow-hidden border',
+                  'min-h-[46px] min-[1920px]:min-h-[54px] px-3 py-2 rounded-xl flex items-center gap-3 transition-all min-w-0 overflow-hidden border relative',
                   recolhida ? 'justify-center' : 'justify-start',
                   ativo
                     ? 'bg-gradient-to-r from-[#FF7A1A]/20 to-[#FFC940]/10 border-[#FF7A1A] text-[#FF7A1A] font-bold shadow-[0_0_20px_rgba(255,122,26,0.2)]'
                     : 'bg-transparent border-transparent text-[#9A9AA6] hover:text-white hover:bg-white/5',
                 ].join(' ')}
               >
-                <span className="shrink-0">{item.icone}</span>
+                <span className="shrink-0 relative">
+                  {item.icone}
+                  {item.id === 'pagar' && (badgePagar ?? 0) > 0 && recolhida && (
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#D62F25] animate-pulse" />
+                  )}
+                </span>
                 {!recolhida && (
-                  <span className="text-sm min-[1920px]:text-base truncate">
-                    {item.rotulo}
-                  </span>
+                  <div className="flex items-center justify-between flex-1 min-w-0">
+                    <span className="text-sm min-[1920px]:text-base truncate">
+                      {item.rotulo}
+                    </span>
+                    {item.id === 'pagar' && (badgePagar ?? 0) > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full bg-[#D62F25] text-white text-[10px] font-bold shrink-0">
+                        {badgePagar}
+                      </span>
+                    )}
+                  </div>
                 )}
               </button>
             );

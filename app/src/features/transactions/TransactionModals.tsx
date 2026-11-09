@@ -6,6 +6,7 @@ import {
   SlidersHorizontal,
   ArrowRight,
   History,
+  CreditCard,
 } from 'lucide-react';
 import {
   DEFAULT_QUICK_TAGS,
@@ -56,6 +57,7 @@ export interface TransactionFormModalProps {
   formas: PaymentMethod[];
   categorias: Category[];
   quickTags?: string[];
+  aoAbrirParcelamento?: () => void;
   aoSalvarSucesso: (mensagem: string) => void;
   aoErro: (mensagem: string) => void;
 }
@@ -71,6 +73,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
   formas,
   categorias,
   quickTags,
+  aoAbrirParcelamento,
   aoSalvarSucesso,
   aoErro,
 }) => {
@@ -401,6 +404,34 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
         )}
 
         {/* 1º CAMPO: VALOR (R$) — Conforme escolha do Octavio na Entrevista */}
+        {tipo === 'expense' && !lancamentoEditando && aoAbrirParcelamento && (
+          <div className="p-3 rounded-xl bg-gradient-to-r from-[#FF7A1A]/10 to-[#FFC940]/10 border border-[#FF7A1A]/30 flex items-center justify-between gap-3 animate-fadeIn">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-[#FF7A1A]/20 text-[#FF7A1A] flex items-center justify-center shrink-0">
+                <CreditCard className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-white block truncate">
+                  Compra parcelada?
+                </span>
+                <span className="text-[10px] text-[#9A9AA6] block truncate">
+                  Cartão de crédito ou boleto em até 48x
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                aoFechar();
+                aoAbrirParcelamento();
+              }}
+              className="px-3 py-1.5 rounded-lg bg-[#FF7A1A] text-black text-xs font-bold shrink-0 hover:bg-[#FF8A2A] transition-colors"
+            >
+              Parcelar
+            </button>
+          </div>
+        )}
+
         <CampoMoeda
           rotulo={
             tipo === 'income'

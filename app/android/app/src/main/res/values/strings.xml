@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CONA CASH</string>
+    <string name="title_activity_main">CONA CASH</string>
+    <string name="package_name">com.conacash.app</string>
+    <string name="custom_url_scheme">com.conacash.app</string>
+</resources>

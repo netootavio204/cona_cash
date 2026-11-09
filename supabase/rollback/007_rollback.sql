@@ -17,3 +17,4 @@ ALTER TABLE public.accounts DROP COLUMN IF EXISTS icon;
 
 DROP TABLE IF EXISTS public.expense_items;
 DROP FUNCTION IF EXISTS public.normalize_text(text);
+

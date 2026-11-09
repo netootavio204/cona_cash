@@ -277,3 +277,4 @@ export const ExpenseItemAutocomplete: React.FC<ExpenseItemAutocompleteProps> = (
     </div>
   );
 };
+

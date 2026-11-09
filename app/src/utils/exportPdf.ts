@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { FinancialReportData, Transaction, ExpenseItemReportRow } from '../types/database';
+import type { FinancialReportData, Transaction, ExpenseItemReportRow, InstallmentsSummary } from '../types/database';
 import { formatCentsToBRL, formatDateTimeBR } from '../utils/format';
 import { APP_NAME, APP_VERSION } from '../config/version';
 
@@ -13,6 +13,7 @@ export interface ExportReportPDFOptions {
   nomeUsuario: string;
   fonteSelecionadaNome?: string;
   topItens?: ExpenseItemReportRow[];
+  installmentsSummary?: InstallmentsSummary | null;
 }
 
 export async function exportReportToPDF({
@@ -24,6 +25,7 @@ export async function exportReportToPDF({
   nomeUsuario,
   fonteSelecionadaNome,
   topItens,
+  installmentsSummary,
 }: ExportReportPDFOptions): Promise<void> {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -223,6 +225,91 @@ export async function exportReportToPDF({
     });
 
     currentY = (doc as any).lastAutoTable.finalY + 10;
+  }
+
+  // 4.5. BLOCO CONTAS A PAGAR & COMPROMISSOS FUTUROS (FASE 9 / v1.4.0)
+  if (installmentsSummary) {
+    if (currentY + 50 > pageHeight) {
+      doc.addPage();
+      currentY = 20;
+    }
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(20, 20, 25);
+    doc.text('4. Contas a Pagar & Compromissos Futuros (Cartão e Boletos)', 14, currentY);
+    currentY += 4;
+
+    const summaryRows = [
+      ['Total a Vencer no Mês', formatCentsToBRL(installmentsSummary.month_total_cents), 'No mês corrente'],
+      ['Contas Atrasadas', formatCentsToBRL(installmentsSummary.overdue_cents), `${installmentsSummary.overdue_count} parcelas`],
+      ['Vencem Hoje', formatCentsToBRL(installmentsSummary.due_today_cents), `${installmentsSummary.due_today_count} parcelas`],
+      ['Próximos 7 Dias', formatCentsToBRL(installmentsSummary.next_7_days_cents), `${installmentsSummary.next_7_days_count} parcelas`],
+    ];
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [['Status / Situação', 'Valor (R$)', 'Quantidade']],
+      body: summaryRows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [220, 53, 69],
+        textColor: [255, 255, 255],
+        fontSize: 8.5,
+        fontStyle: 'bold',
+      },
+      bodyStyles: { fontSize: 8 },
+      columnStyles: {
+        0: { cellWidth: 90 },
+        1: { halign: 'right', fontStyle: 'bold' },
+        2: { halign: 'center' },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    currentY = (doc as any).lastAutoTable.finalY + 6;
+
+    if (installmentsSummary.committed_next_6_months && installmentsSummary.committed_next_6_months.length > 0) {
+      if (currentY + 40 > pageHeight) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(50, 50, 60);
+      doc.text('Comprometimento nos Próximos Meses:', 14, currentY);
+      currentY += 3;
+
+      const monthlyRows = installmentsSummary.committed_next_6_months.map(
+        (m: { month_label: string; total_cents: number; count: number }) => [
+          m.month_label,
+          formatCentsToBRL(m.total_cents),
+          `${m.count} parcela(s)`,
+        ]
+      );
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [['Mês de Vencimento', 'Total Comprometido (R$)', 'Parcelas']],
+        body: monthlyRows,
+        theme: 'striped',
+        headStyles: {
+          fillColor: [70, 70, 80],
+          textColor: [255, 255, 255],
+          fontSize: 8,
+        },
+        bodyStyles: { fontSize: 7.5 },
+        columnStyles: {
+          0: { cellWidth: 70 },
+          1: { halign: 'right', fontStyle: 'bold' },
+          2: { halign: 'center' },
+        },
+        margin: { left: 14, right: 14 },
+      });
+
+      currentY = (doc as any).lastAutoTable.finalY + 10;
+    }
   }
 
   // 5. LISTA DE LANÇAMENTOS DO PERÍODO

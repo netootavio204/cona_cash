@@ -18,3 +18,4 @@ ALTER TABLE public.profiles
   DROP COLUMN IF EXISTS due_alert_days_before,
   DROP COLUMN IF EXISTS due_alert_time,
   DROP COLUMN IF EXISTS due_alerts_enabled;
+

@@ -454,6 +454,18 @@ export interface InstallmentsSummary {
   next_7_days_cents: number;
   next_7_days_count: number;
   month_total_cents: number;
+  open_total_cents?: number;
+  open_total_count?: number;
+  due_next_7_days_cents?: number;
+  due_next_7_days_count?: number;
+  paid_this_month_cents?: number;
+  paid_this_month_count?: number;
+  committed_next_6_months?: {
+    month_label: string;
+    year_month: string;
+    total_cents: number;
+    count: number;
+  }[];
 }
 
 
