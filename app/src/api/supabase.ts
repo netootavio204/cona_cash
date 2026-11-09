@@ -13,6 +13,10 @@ import {
   type ExpenseItemDetailReport,
   type ExpenseItemReportRow,
   type IncomeSource,
+  type Installment,
+  type InstallmentPurchase,
+  type InstallmentsSummary,
+  type InstallmentWithPurchase,
   type PaymentMethod,
   type Profile,
   type Transaction,
@@ -1062,4 +1066,158 @@ export async function fetchExpenseItemDetail(
   if (error) throw error;
   return data as ExpenseItemDetailReport;
 }
+
+// ============================================================================
+// COMPRAS PARCELADAS E CONTAS A PAGAR (FASE 9)
+// ============================================================================
+
+export async function createInstallmentPurchase(payload: {
+  kind: 'credit_card' | 'boleto';
+  title: string;
+  total_cents: number;
+  installments_count: number;
+  first_due_date: string;
+  expense_item_id?: string | null;
+  category_id?: string | null;
+  income_source_id?: string | null;
+  card_name?: string | null;
+  note?: string | null;
+  installments_override?: { number: number; due_date: string; amount_cents: number }[];
+}): Promise<{
+  success: boolean;
+  purchase_id: string;
+  installments_count: number;
+  total_cents: number;
+}> {
+  const { data, error } = await supabase.rpc('create_installment_purchase', {
+    p_kind: payload.kind,
+    p_title: payload.title,
+    p_total_cents: payload.total_cents,
+    p_installments_count: payload.installments_count,
+    p_first_due_date: payload.first_due_date,
+    p_expense_item_id: payload.expense_item_id || null,
+    p_category_id: payload.category_id || null,
+    p_income_source_id: payload.income_source_id || null,
+    p_card_name: payload.card_name || null,
+    p_note: payload.note || null,
+    p_installments_override: payload.installments_override || null,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchInstallmentPurchases(): Promise<InstallmentPurchase[]> {
+  const { data, error } = await supabase
+    .from('installment_purchases')
+    .select('*')
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return (data || []) as InstallmentPurchase[];
+}
+
+export async function fetchInstallments(filter?: {
+  status?: 'pending' | 'paid';
+  purchaseId?: string;
+}): Promise<InstallmentWithPurchase[]> {
+  let query = supabase
+    .from('installments')
+    .select(`
+      *,
+      purchase:installment_purchases (*)
+    `)
+    .is('deleted_at', null)
+    .order('due_date', { ascending: true });
+
+  if (filter?.status) {
+    query = query.eq('status', filter.status);
+  }
+  if (filter?.purchaseId) {
+    query = query.eq('purchase_id', filter.purchaseId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data || []) as InstallmentWithPurchase[];
+}
+
+export async function payInstallment(payload: {
+  installmentId: string;
+  accountId: string;
+  paidAtISO?: string;
+  paidAmountCents?: number;
+}): Promise<{
+  success: boolean;
+  installment_id: string;
+  transaction_id: string;
+  paid_amount_cents: number;
+}> {
+  const { data, error } = await supabase.rpc('pay_installment', {
+    p_installment_id: payload.installmentId,
+    p_account_id: payload.accountId,
+    p_paid_at: payload.paidAtISO || new Date().toISOString(),
+    p_paid_amount_cents: payload.paidAmountCents != null ? payload.paidAmountCents : null,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function unpayInstallment(installmentId: string): Promise<{
+  success: boolean;
+  installment_id: string;
+  status: 'pending';
+}> {
+  const { data, error } = await supabase.rpc('unpay_installment', {
+    p_installment_id: installmentId,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateInstallmentDueDateOrAmount(
+  installmentId: string,
+  updates: { due_date?: string; amount_cents?: number }
+): Promise<Installment> {
+  const { data, error } = await supabase
+    .from('installments')
+    .update(updates)
+    .eq('id', installmentId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as Installment;
+}
+
+export async function deleteInstallmentPurchase(purchaseId: string): Promise<boolean> {
+  // Soft-delete nas parcelas pendentes e na compra
+  const now = new Date().toISOString();
+  await supabase
+    .from('installments')
+    .update({ deleted_at: now })
+    .eq('purchase_id', purchaseId)
+    .eq('status', 'pending');
+
+  const { error } = await supabase
+    .from('installment_purchases')
+    .update({ deleted_at: now })
+    .eq('id', purchaseId);
+
+  if (error) throw error;
+  return true;
+}
+
+export async function fetchInstallmentsSummary(todayDate?: string): Promise<InstallmentsSummary> {
+  const { data, error } = await supabase.rpc('get_installments_summary', {
+    p_today: todayDate || new Date().toISOString().slice(0, 10),
+  });
+
+  if (error) throw error;
+  return data as InstallmentsSummary;
+}
+
 

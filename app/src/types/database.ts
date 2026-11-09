@@ -13,6 +13,9 @@ export interface Profile {
   sound_enabled: boolean;
   week_starts_on: 0 | 1;
   quick_tags?: string[];
+  due_alerts_enabled?: boolean;
+  due_alert_time?: string;
+  due_alert_days_before?: number;
   created_at: string;
   updated_at: string;
 }
@@ -124,6 +127,7 @@ export interface Transaction {
   net_cents: number;
   note: string;
   expense_item_id?: string | null;
+  installment_id?: string | null;
   batch_id: string | null;
   parent_id?: string | null;
   deleted_at: string | null;
@@ -395,4 +399,61 @@ export interface ExpenseItemDetailReport {
   monthly_history: ExpenseItemHistoryMonth[];
   recent_transactions: ExpenseItemRecentTransaction[];
 }
+
+// ==============================================================================
+// COMPRAS PARCELADAS E CONTAS A PAGAR (Fase 9 — v1.4.0)
+// ==============================================================================
+export type InstallmentPurchaseKind = 'credit_card' | 'boleto';
+export type InstallmentStatus = 'pending' | 'paid';
+export type InstallmentComputedStatus = 'pending' | 'paid' | 'overdue' | 'due_today';
+
+export interface InstallmentPurchase {
+  id: string;
+  user_id: string;
+  kind: InstallmentPurchaseKind;
+  title: string;
+  expense_item_id: string | null;
+  category_id: string | null;
+  income_source_id: string | null;
+  card_name: string | null;
+  total_cents: number;
+  installments_count: number;
+  first_due_date: string; // YYYY-MM-DD
+  note: string | null;
+  deleted_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Installment {
+  id: string;
+  user_id: string;
+  purchase_id: string;
+  number: number;
+  due_date: string; // YYYY-MM-DD
+  amount_cents: number;
+  status: InstallmentStatus;
+  paid_at: string | null;
+  paid_amount_cents: number | null;
+  paid_account_id: string | null;
+  deleted_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InstallmentWithPurchase extends Installment {
+  purchase?: InstallmentPurchase;
+  computed_status?: InstallmentComputedStatus;
+}
+
+export interface InstallmentsSummary {
+  overdue_cents: number;
+  overdue_count: number;
+  due_today_cents: number;
+  due_today_count: number;
+  next_7_days_cents: number;
+  next_7_days_count: number;
+  month_total_cents: number;
+}
+
 
