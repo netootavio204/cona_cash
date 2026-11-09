@@ -149,12 +149,19 @@ html.light .hover\:bg-\[\#323242\]:hover {
 }
 
 /* Campos de formulário (inputs, selects, textareas) com fundo branco nítido e borda visível */
-html.light input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html.light .campo-moeda-box,
+html.light input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(.campo-moeda-input),
 html.light select,
 html.light textarea {
   background-color: #FFFFFF !important;
   color: #1A1410 !important;
   border-color: #D6C7B2 !important;
+}
+
+html.light .campo-moeda-input {
+  background-color: transparent !important;
+  color: #1A1410 !important;
+  border: 0 !important;
 }
 
 html.light input::placeholder,
