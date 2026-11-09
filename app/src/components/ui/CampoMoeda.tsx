@@ -42,10 +42,12 @@ export const CampoMoeda: React.FC<CampoMoedaProps> = ({
 
       <input
         id={id}
-        type="text"
+        type="tel"
         inputMode="numeric"
         pattern="[0-9]*"
         autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
         enterKeyHint="done"
         value={valorFormatado}
         onChange={handleChange}

@@ -629,8 +629,11 @@ export const DailyBatchTwoStagesModals: React.FC<DailyBatchModalsProps> = ({
                               Taxa % (Calculada automática)
                             </label>
                             <input
-                              type="text"
+                              type="tel"
                               inputMode="decimal"
+                              pattern="[0-9.,]*"
+                              autoCorrect="off"
+                              spellCheck={false}
                               value={taxaDistPercent}
                               onChange={(e) => {
                                 setTaxaDistPercent(e.target.value);

@@ -2337,7 +2337,11 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
             value={formaTaxaTexto}
             onChange={(e) => setFormaTaxaTexto(e.target.value)}
             placeholder="Ex.: 3,49 ou 0"
+            type="tel"
             inputMode="decimal"
+            pattern="[0-9.,]*"
+            autoCorrect="off"
+            spellCheck={false}
             dica="Use vírgula ou ponto para decimais (ex.: 1,99 ou 3,49)"
           />
 
