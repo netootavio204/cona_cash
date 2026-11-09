@@ -26,11 +26,13 @@ import {
   fetchPaymentMethods,
   fetchTransactions,
   fetchFinancialReport,
+  fetchExpensesByItemReport,
 } from '../../api/supabase';
 import type {
   Account,
   AccountBalance,
   Category,
+  ExpenseItemReportRow,
   IncomeSource,
   PaymentMethod,
   Transaction,
@@ -67,6 +69,8 @@ import {
 } from '../transactions/TransactionModals';
 import { DailyBatchTwoStagesModals } from '../transactions/DailyBatchTwoStagesModals';
 import { CategoryIcon } from '../../components/ui/CategoryIcon';
+import { AppIcon } from '../../components/ui/iconLibrary';
+import { ExpenseItemDetailModal } from '../../components/ui/ExpenseItemDetailModal';
 import { APP_NAME, APP_VERSION } from '../../config/version';
 
 export const HomePage: React.FC = () => {
@@ -109,6 +113,8 @@ export const HomePage: React.FC = () => {
   const [carregandoDados, setCarregandoDados] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [relatorio7Dias, setRelatorio7Dias] = useState<FinancialReportData | null>(null);
+  const [topItensMes, setTopItensMes] = useState<ExpenseItemReportRow[]>([]);
+  const [itemModalDetalheId, setItemModalDetalheId] = useState<string | null>(null);
   const [metas, setMetas] = useState<Goal[]>([]);
   const [todasTransacoes, setTodasTransacoes] = useState<Transaction[]>([]);
 
@@ -179,7 +185,11 @@ export const HomePage: React.FC = () => {
       const end7 = agora.toISOString().slice(0, 10);
 
       await ensureMyGoals().catch(() => {});
-      const [balances, accs, srcs, pms, cats, recentTx, todayTx, rep7, userGoals, allTx] =
+      const inicioMesDate = new Date();
+      inicioMesDate.setDate(1);
+      inicioMesDate.setHours(0, 0, 0, 0);
+
+      const [balances, accs, srcs, pms, cats, recentTx, todayTx, rep7, userGoals, allTx, itensMesData] =
         await Promise.all([
           fetchAccountBalances(),
           fetchAccounts(),
@@ -196,10 +206,12 @@ export const HomePage: React.FC = () => {
           fetchFinancialReport({ startDateISO: start7, endDateISO: end7 }).catch(() => null),
           fetchGoals().catch(() => []),
           fetchTransactions({ page: 1, pageSize: 1000 }).catch(() => ({ data: [] })),
+          fetchExpensesByItemReport(inicioMesDate.toISOString(), new Date().toISOString()).catch(() => ({ total_expenses_cents: 0, items: [] })),
         ]);
 
       setMetas(userGoals);
       setTodasTransacoes(allTx.data);
+      setTopItensMes(itensMesData.items ? itensMesData.items.slice(0, 3) : []);
 
       if (rep7) {
         setRelatorio7Dias(rep7);
@@ -586,6 +598,62 @@ export const HomePage: React.FC = () => {
                     }}
                   />
                 </div>
+
+                {/* CARD: MAIORES GASTOS DO MÊS (TOP 3 ITENS) — NOVO v1.2 / PARTE D */}
+                {topItensMes.length > 0 && (
+                  <Card padding="md">
+                    <div className="flex items-center justify-between gap-2 mb-2 min-w-0">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#9A9AA6] truncate">
+                        Maiores Gastos do Mês
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setAba('relatorios')}
+                        className="text-xs text-[#FF7A1A] font-semibold hover:underline shrink-0"
+                      >
+                        Ver todos
+                      </button>
+                    </div>
+
+                    <div className="flex flex-col gap-2 min-w-0">
+                      {topItensMes.map((item, idx) => (
+                        <div
+                          key={item.item_id || `top-item-${idx}`}
+                          onClick={() => item.item_id && setItemModalDetalheId(item.item_id)}
+                          className="flex items-center justify-between gap-2 p-2 rounded-xl bg-[#0B0B0D] border border-[#262630]/70 cursor-pointer hover:border-[#FF7A1A]/40 transition-colors"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="text-[11px] font-bold text-[#FF7A1A] w-4 text-center shrink-0">
+                              #{idx + 1}
+                            </span>
+                            <div className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 text-white flex items-center justify-center shrink-0">
+                              <AppIcon name={item.item_icon} className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="min-w-0">
+                              <span className="text-xs font-bold text-white block truncate">
+                                {item.item_name}
+                              </span>
+                              <span className="text-[10px] text-[#9A9AA6] block truncate">
+                                {item.count} compra(s)
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="text-right shrink-0">
+                            <ValorMoeda
+                              centavos={item.total_cents}
+                              tamanho="sm"
+                              cor="negativo"
+                            />
+                            <span className="text-[10px] text-[#FFC940] block">
+                              {item.percentage}%
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                )}
 
                 {/* BLOCOS DA FASE 4: GANHOS POR DIA & LUCRO POR FONTE */}
                 {relatorio7Dias && (
@@ -1012,6 +1080,12 @@ export const HomePage: React.FC = () => {
             aberto={Boolean(lancamentoHistorico)}
             aoFechar={() => setLancamentoHistorico(null)}
             lancamento={lancamentoHistorico}
+          />
+
+          <ExpenseItemDetailModal
+            aberto={Boolean(itemModalDetalheId)}
+            aoFechar={() => setItemModalDetalheId(null)}
+            itemId={itemModalDetalheId}
           />
         </>
       )}

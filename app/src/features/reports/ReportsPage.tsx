@@ -16,11 +16,13 @@ import type {
   FinancialReportData,
   IncomeSource,
   Transaction,
+  ExpenseItemReportRow,
 } from '../../types/database';
 import {
   fetchFinancialReport,
   fetchIncomeSources,
   fetchTransactions,
+  fetchExpensesByItemReport,
 } from '../../api/supabase';
 import {
   formatCentsToBRL,
@@ -31,6 +33,8 @@ import { Botao } from '../../components/ui/Botao';
 import { ValorMoeda } from '../../components/ui/ValorMoeda';
 import { MiniBarChart } from '../../components/ui/MiniBarChart';
 import { DonutChart } from '../../components/ui/DonutChart';
+import { AppIcon } from '../../components/ui/iconLibrary';
+import { ExpenseItemDetailModal } from '../../components/ui/ExpenseItemDetailModal';
 import { exportReportToPDF } from '../../utils/exportPdf';
 import { useAuth } from '../auth/AuthContext';
 
@@ -57,6 +61,11 @@ export const ReportsPage: React.FC = () => {
 
   const [relatorioAtual, setRelatorioAtual] = useState<FinancialReportData | null>(null);
   const [relatorioAnterior, setRelatorioAnterior] = useState<FinancialReportData | null>(null);
+  const [itensRelatorio, setItensRelatorio] = useState<ExpenseItemReportRow[]>([]);
+  const [totalItensCentavos, setTotalItensCentavos] = useState(0);
+  const [itemSelecionadoDetalhe, setItemSelecionadoDetalhe] = useState<string | null>(null);
+  const [itemFiltroTexto, setItemFiltroTexto] = useState('');
+  const [datasBounds, setDatasBounds] = useState<{ startISO: string; endISO: string }>({ startISO: '', endISO: '' });
   const [periodoLabel, setPeriodoLabel] = useState('');
 
   const weekStartsOn = perfil?.week_starts_on ?? 1;
@@ -87,8 +96,9 @@ export const ReportsPage: React.FC = () => {
       }
 
       setPeriodoLabel(label);
+      setDatasBounds({ startISO, endISO });
 
-      const [curReport, prevReport] = await Promise.all([
+      const [curReport, prevReport, itemReportData] = await Promise.all([
         fetchFinancialReport({
           startDateISO: startISO,
           endDateISO: endISO,
@@ -101,10 +111,16 @@ export const ReportsPage: React.FC = () => {
               incomeSourceId: fonteFiltroId || undefined,
             })
           : Promise.resolve(null),
+        fetchExpensesByItemReport(startISO, endISO).catch((err) => {
+          console.warn('Erro ao carregar ranking de itens:', err);
+          return { total_expenses_cents: 0, items: [] };
+        }),
       ]);
 
       setRelatorioAtual(curReport);
       setRelatorioAnterior(prevReport);
+      setItensRelatorio(itemReportData.items || []);
+      setTotalItensCentavos(itemReportData.total_expenses_cents || 0);
     } catch (err) {
       console.error('Erro ao carregar relatórios:', err);
     } finally {
@@ -162,6 +178,7 @@ export const ReportsPage: React.FC = () => {
         transacoes: txs.data,
         nomeUsuario: perfil?.name || 'Octavio',
         fonteSelecionadaNome: fonteNome,
+        topItens: itensRelatorio,
       });
     } catch (err) {
       console.error('Erro ao exportar PDF:', err);
@@ -471,6 +488,85 @@ export const ReportsPage: React.FC = () => {
             </div>
           </Card>
 
+          {/* RANKING: GASTOS POR ITEM (NOVO v1.2 — PARTE D) */}
+          <Card padding="md">
+            <div className="space-y-3 min-w-0">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 min-w-0">
+                <div>
+                  <h3 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider truncate">
+                    Gastos por Item Comprado
+                  </h3>
+                  <p className="text-xs text-[#9A9AA6] truncate">
+                    Ranking de compras do período ({itensRelatorio.length} itens)
+                  </p>
+                </div>
+
+                {/* Filtro por nome do item */}
+                <div className="w-full sm:w-60">
+                  <input
+                    type="text"
+                    value={itemFiltroTexto}
+                    onChange={(e) => setItemFiltroTexto(e.target.value)}
+                    placeholder="Filtrar por item..."
+                    className="w-full px-3 py-1.5 text-xs rounded-xl bg-[#0B0B0D] border border-[#262630] text-white placeholder-[#9A9AA6]/50 focus:outline-none focus:ring-1 focus:ring-[#FF7A1A]"
+                  />
+                </div>
+              </div>
+
+              {itensRelatorio.length === 0 ? (
+                <p className="text-xs text-[#9A9AA6] py-4 text-center">
+                  Nenhum gasto por item registrado neste período.
+                </p>
+              ) : (
+                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                  {itensRelatorio
+                    .filter((it) =>
+                      itemFiltroTexto
+                        ? it.item_name.toLowerCase().includes(itemFiltroTexto.toLowerCase())
+                        : true
+                    )
+                    .map((item, index) => (
+                      <button
+                        key={item.item_id || `item-null-${index}`}
+                        type="button"
+                        onClick={() => item.item_id && setItemSelecionadoDetalhe(item.item_id)}
+                        className="w-full p-2.5 rounded-xl bg-[#0B0B0D] border border-[#262630] flex items-center justify-between gap-3 text-left hover:border-[#FF7A1A]/50 transition-colors group"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="text-xs font-bold text-[#9A9AA6] w-5 text-center shrink-0">
+                            #{index + 1}
+                          </span>
+                          <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 text-white flex items-center justify-center shrink-0 group-hover:text-[#FF7A1A]">
+                            <AppIcon name={item.item_icon} className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-xs font-bold text-white block truncate">
+                              {item.item_name}
+                            </span>
+                            <span className="text-[10px] text-[#9A9AA6] block truncate">
+                              {item.count} compra(s) • Média: {formatCentsToBRL(item.average_cents)}
+                              {item.category_name ? ` • ${item.category_name}` : ''}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <ValorMoeda
+                            centavos={item.total_cents}
+                            tamanho="sm"
+                            cor="negativo"
+                          />
+                          <span className="text-[10px] text-[#FFC940] font-medium block">
+                            {item.percentage}%
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
+          </Card>
+
           {/* GRÁFICOS: EVOLUÇÃO DIÁRIA + DISTRIBUIÇÃO */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 min-w-0">
             {/* Gráfico de Barras Diário */}
@@ -525,6 +621,15 @@ export const ReportsPage: React.FC = () => {
           </div>
         </div>
       ) : null}
+
+      {/* Modal de Detalhe do Item de Saída */}
+      <ExpenseItemDetailModal
+        aberto={!!itemSelecionadoDetalhe}
+        aoFechar={() => setItemSelecionadoDetalhe(null)}
+        itemId={itemSelecionadoDetalhe}
+        startDateISO={datasBounds.startISO}
+        endDateISO={datasBounds.endISO}
+      />
     </div>
   );
 };

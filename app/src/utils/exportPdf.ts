@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { FinancialReportData, Transaction } from '../types/database';
+import type { FinancialReportData, Transaction, ExpenseItemReportRow } from '../types/database';
 import { formatCentsToBRL, formatDateTimeBR } from '../utils/format';
 import { APP_NAME, APP_VERSION } from '../config/version';
 
@@ -12,6 +12,7 @@ export interface ExportReportPDFOptions {
   transacoes: Transaction[];
   nomeUsuario: string;
   fonteSelecionadaNome?: string;
+  topItens?: ExpenseItemReportRow[];
 }
 
 export async function exportReportToPDF({
@@ -22,6 +23,7 @@ export async function exportReportToPDF({
   transacoes,
   nomeUsuario,
   fonteSelecionadaNome,
+  topItens,
 }: ExportReportPDFOptions): Promise<void> {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -178,6 +180,51 @@ export async function exportReportToPDF({
     currentY = (doc as any).lastAutoTable.finalY + 10;
   }
 
+  // 2.1 TOP 10 MAIORES GASTOS POR ITEM (NOVO v1.2 — PARTE D)
+  if (topItens && topItens.length > 0) {
+    if (currentY > pageHeight - 50) {
+      doc.addPage();
+      currentY = 20;
+    }
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(20, 20, 25);
+    doc.text('3. Maiores Gastos por Item (Top 10)', 14, currentY);
+    currentY += 4;
+
+    const itemRows = topItens.slice(0, 10).map((it, idx) => [
+      `#${idx + 1} ${it.item_name}`,
+      formatCentsToBRL(it.total_cents),
+      `${it.count}x`,
+      formatCentsToBRL(it.average_cents),
+      `${it.percentage}%`,
+    ]);
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [['Item Comprado', 'Total (R$)', 'Qtd', 'Média (R$)', '% Total']],
+      body: itemRows,
+      theme: 'striped',
+      headStyles: {
+        fillColor: [232, 98, 10],
+        textColor: [255, 255, 255],
+        fontSize: 8.5,
+      },
+      bodyStyles: { fontSize: 8 },
+      columnStyles: {
+        0: { cellWidth: 70 },
+        1: { halign: 'right', fontStyle: 'bold' },
+        2: { halign: 'center' },
+        3: { halign: 'right' },
+        4: { halign: 'right' },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    currentY = (doc as any).lastAutoTable.finalY + 10;
+  }
+
   // 5. LISTA DE LANÇAMENTOS DO PERÍODO
   if (transacoes && transacoes.length > 0) {
     doc.addPage();
@@ -186,7 +233,7 @@ export async function exportReportToPDF({
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(20, 20, 25);
-    doc.text(`3. Extrato Completo de Lançamentos (${transacoes.length} registros)`, 14, currentY);
+    doc.text(`4. Extrato Completo de Lançamentos (${transacoes.length} registros)`, 14, currentY);
     currentY += 4;
 
     const txRows = transacoes.map((t) => {
