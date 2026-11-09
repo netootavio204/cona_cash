@@ -79,8 +79,8 @@ describe('Formatação de moeda em centavos e taxas (PRD 5, 7.1, Fase 2, Fase 3 
     expect(netCents).toBe(11581); // R$ 115,81
   });
 
-  it('mantém versão sincronizada v1.2.0-a / 006_daily_batches_two_stages', () => {
-    expect(APP_VERSION).toBe('v1.2.0-a');
+  it('mantém versão sincronizada v1.2.0 beta / 006_daily_batches_two_stages', () => {
+    expect(APP_VERSION).toBe('v1.2.0 beta');
     expect(SCHEMA_VERSION).toBe('006_daily_batches_two_stages');
   });
 });

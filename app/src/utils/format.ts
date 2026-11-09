@@ -132,6 +132,24 @@ export function toSaoPauloDateTimeLocal(date: Date = new Date()): string {
 }
 
 /**
+ * Gera string "YYYY-MM-DD" no fuso America/Sao_Paulo para <input type="date" />
+ */
+export function toSaoPauloDateOnly(date: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  const map: Record<string, string> = {};
+  for (const p of parts) {
+    map[p.type] = p.value;
+  }
+  return `${map.year}-${map.month}-${map.day}`;
+}
+
+/**
  * Converte valor de <input type="datetime-local" /> (considerado em America/Sao_Paulo -03:00) para ISO UTC
  */
 export function fromSaoPauloDateTimeLocalToISO(localStr: string): string {

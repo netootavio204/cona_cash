@@ -37,6 +37,7 @@ import type {
   TransactionKind,
 } from '../../types/database';
 import {
+  formatCentsToBRL,
   formatDateTimeBR,
   getTodaySaoPauloBoundsISO,
   sumEarningsAndExpenses,
@@ -64,6 +65,7 @@ import {
   BatchIncomeModal,
   TransactionFormModal,
 } from '../transactions/TransactionModals';
+import { DailyBatchTwoStagesModals } from '../transactions/DailyBatchTwoStagesModals';
 import { CategoryIcon } from '../../components/ui/CategoryIcon';
 import { APP_NAME, APP_VERSION } from '../../config/version';
 
@@ -117,6 +119,7 @@ export const HomePage: React.FC = () => {
   const [lancamentoEditando, setLancamentoEditando] =
     useState<Transaction | null>(null);
   const [modalLoteAberto, setModalLoteAberto] = useState(false);
+  const [modoLote, setModoLote] = useState<'novo' | 'distribuir'>('novo');
   const [lancamentoHistorico, setLancamentoHistorico] =
     useState<Transaction | null>(null);
 
@@ -279,6 +282,7 @@ export const HomePage: React.FC = () => {
         abrirNovoLancamento('transfer');
       } else if (k === 'l') {
         e.preventDefault();
+        setModoLote('novo');
         setModalLoteAberto(true);
       }
     };
@@ -295,6 +299,14 @@ export const HomePage: React.FC = () => {
     (acc, b) => acc + (b.current_balance_cents || 0),
     0
   );
+  const contaADistribuir = saldosContas.find(
+    (b) =>
+      (b.is_system && b.system_kind === 'pending') ||
+      b.account_name.toLowerCase().includes('distribuir')
+  );
+  const saldoADistribuirCents = contaADistribuir
+    ? contaADistribuir.current_balance_cents
+    : 0;
   const resultadoHojeCents =
     resumoHoje.entradasLiquidasCents - resumoHoje.saidasCents;
 
@@ -443,7 +455,10 @@ export const HomePage: React.FC = () => {
               tamanho="sm"
               icone={<Layers className="w-4 h-4 text-[#2EE59D]" />}
               texto="Lote do dia (L)"
-              onClick={() => setModalLoteAberto(true)}
+              onClick={() => {
+                setModoLote('novo');
+                setModalLoteAberto(true);
+              }}
             />
           </div>
         </header>
@@ -509,6 +524,38 @@ export const HomePage: React.FC = () => {
                   </div>
                 </Card>
 
+                {/* Card em destaque de valor A Distribuir (Fase 7 - PRD 4.2B e 4.7) */}
+                {saldoADistribuirCents > 0 && (
+                  <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-[#FFC940]/15 via-[#FF7A1A]/10 to-[#141419] border border-[#FFC940]/40 flex items-center justify-between gap-3 shadow-lg shadow-[#FFC940]/5 animate-fadeIn">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-[#FFC940]/20 text-[#FFC940] flex items-center justify-center shrink-0 border border-[#FFC940]/40">
+                        <Layers className="w-5 h-5 animate-pulse" />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[10px] sm:text-xs font-bold text-[#FFC940] uppercase tracking-wider block">
+                          A Distribuir
+                        </span>
+                        <span className="text-lg sm:text-xl font-black text-[#F5F5F7] tabular-nums truncate block">
+                          {formatCentsToBRL(saldoADistribuirCents)}
+                        </span>
+                        <span className="text-[11px] text-[#9A9AA6] truncate block">
+                          Receitas aguardando destino nas contas
+                        </span>
+                      </div>
+                    </div>
+                    <Botao
+                      variante="primario"
+                      tamanho="sm"
+                      texto="Distribuir"
+                      onClick={() => {
+                        setModoLote('distribuir');
+                        setModalLoteAberto(true);
+                      }}
+                      className="shrink-0"
+                    />
+                  </div>
+                )}
+
                 {/* Atalhos Rápidos (4 botões grandes do PRD 4.7) */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2.5 min-w-0">
                   <Botao
@@ -533,7 +580,10 @@ export const HomePage: React.FC = () => {
                     variante="secundario"
                     icone={<Layers className="w-4 h-4 text-[#2EE59D]" />}
                     texto="Lote do dia"
-                    onClick={() => setModalLoteAberto(true)}
+                    onClick={() => {
+                      setModoLote('novo');
+                      setModalLoteAberto(true);
+                    }}
                   />
                 </div>
 
@@ -858,7 +908,10 @@ export const HomePage: React.FC = () => {
               formas={formas}
               categorias={categorias}
               abrirNovoLancamento={abrirNovoLancamento}
-              abrirLote={() => setModalLoteAberto(true)}
+              abrirLote={() => {
+                setModoLote('novo');
+                setModalLoteAberto(true);
+              }}
               abrirEditarLancamento={abrirEditarLancamento}
               abrirHistoricoLancamento={(tx) => setLancamentoHistorico(tx)}
               aoAlterarDados={carregarDadosGerais}
@@ -940,17 +993,19 @@ export const HomePage: React.FC = () => {
             aoErro={(msg) => mostrarAviso(msg, 'erro')}
           />
 
-          <BatchIncomeModal
+          <DailyBatchTwoStagesModals
             aberto={modalLoteAberto}
             aoFechar={() => setModalLoteAberto(false)}
             contas={contas}
             fontes={fontes}
             formas={formas}
-            aoSalvarSucesso={(msg) => {
+            modoInicial={modoLote}
+            aoSucesso={(msg) => {
               mostrarAviso(msg, 'sucesso');
               carregarDadosGerais();
             }}
             aoErro={(msg) => mostrarAviso(msg, 'erro')}
+            aoRecarregarDados={carregarDadosGerais}
           />
 
           <AuditHistoryModal
